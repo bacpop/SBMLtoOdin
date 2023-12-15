@@ -118,7 +118,7 @@ getFunctionOutput <- function(m, ind, r){
 #' @examples
 in_reserved_lib <- function(param_name, reserved_lib){
   if(is.element(param_name, names(reserved_lib))){
-    param_name <- reserved_lib[param_name]
+    param_name <- as.character(reserved_lib[param_name])
   }
   param_name
 }
@@ -235,6 +235,8 @@ translate_piecewise <- function(file_content){
     piece_expr0 <- stringi::stri_split_fixed(str = piece_expr[i], pattern = "(", n = 3)[[1]]
     val1 <- strsplit(piece_expr0[2],",")[[1]][1]
     piece_expr1 <- stringi::stri_split_fixed(str = piece_expr0[3], pattern = ")", n = 3)[[1]]
+    # I should probably write a more general version of this function
+    # potentially one that checks whether lt is part of the expression
     cond1 <- strsplit(piece_expr1[1],",")[[1]][1]
     cond2 <- strsplit(piece_expr1[1],",")[[1]][2]
     val2 <- strsplit(piece_expr1[2],",")[[1]][2]
@@ -309,6 +311,7 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
   # load_all()
   # SBMLtoOdin::SBML_to_odin("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
   # devtools::document()
+  # devtools::test()
 
   model = SBMLtoOdin::importSBML(path_to_input)
 
@@ -393,6 +396,7 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
     file_str <- paste(file_str, paste(libSBML::Compartment_getId(comp), " <- ", libSBML::Compartment_getSize(comp), sep = ""), sep = "\n")
   }
   # Call function that replaces piecewise() by a differentiable approximation using tanh(20*x)
+  print(file_str)
   if(grepl("piecewise",file_str)){
     file_str <- SBMLtoOdin::translate_piecewise(file_str)
   }
