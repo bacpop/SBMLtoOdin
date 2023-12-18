@@ -35,8 +35,16 @@ getRule <- function(file_content, m, i){
     file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
   }
   else if(rule_type == "RULE_TYPE_RATE"){
-    print("Warning: I cannot deal with rate rules yet\n")
-    file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+    if(libSBML::Rule_isParameter(libSBML::Model_getRule(m,i-1))){
+      # this is a rule for a parameter, not for a species
+      #file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+      file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), "1 + 0.5 * t"), collapse = " <- "), sep = "\n")
+    }
+    else{
+      print("Warning: I cannot deal with rate rules yet\n")
+      file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+    }
+
   }
   else{
     print("I do not recognise this rule type")
@@ -324,13 +332,26 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
     species = libSBML::Model_getSpecies(model, i-1)
     id = libSBML::Species_getId(species)
     dic_react[id] <- 0
+    found_initial <- FALSE
     if(!is.na(libSBML::Species_getInitialAmount(species))){
       conc = libSBML::Species_getInitialAmount(species)
+      found_initial <- TRUE
     }
     else if(!is.na(libSBML::Species_getInitialConcentration(species))){
       conc = libSBML::Species_getInitialConcentration(species)
+      found_initial <- TRUE
     }
-    else{
+    else if(libSBML::Model_getNumRules(model)>0){
+      for (j in 1:libSBML::Model_getNumRules(model)) {
+        if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
+          if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
+            conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
+            found_initial <- TRUE
+          }
+        }
+      }
+    }
+    if(!found_initial){
       print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
     }
     file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- user(",conc, ")", sep = ""), sep = "\n")
@@ -339,7 +360,7 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
   print("Fetching Rules")
   for (i in seq_len(libSBML::Model_getNumRules(model))) {
     if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
-      dic_react <- SBMLtoOdin::getSpeciesRule(file_str, model, i, dic_react)
+      dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react)
     }
     else{
       file_str <- SBMLtoOdin::getRule(file_str, model, i)
@@ -396,7 +417,7 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
     file_str <- paste(file_str, paste(libSBML::Compartment_getId(comp), " <- ", libSBML::Compartment_getSize(comp), sep = ""), sep = "\n")
   }
   # Call function that replaces piecewise() by a differentiable approximation using tanh(20*x)
-  print(file_str)
+  #print(file_str)
   if(grepl("piecewise",file_str)){
     file_str <- SBMLtoOdin::translate_piecewise(file_str)
   }
