@@ -153,6 +153,14 @@ AddToParamLib <- function(r, local_param_lib,reserved_lib){
         id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(k,i-1))
         id <- SBMLtoOdin::in_reserved_lib(id, reserved_lib)
         value <- libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(k,i-1))
+        #local_counter <- 2
+        #id_new <- id
+        #while(is.element(id_new, names(local_param_lib))) {
+        #  id_new <- paste(id,"_",as.character(local_counter),sep = "")
+        #  print(id_new)
+        #  local_counter <- local_counter + 1
+        #}
+        #local_param_lib[id_new] <- value
         if(is.element(id, names(local_param_lib))){
           if(value != local_param_lib[id]){
             print(paste("Warning: ", id, "is defined twice with values ", value , " and ", local_param_lib[id], ". Assuming value ", local_param_lib[id], sep = ""))
@@ -161,6 +169,7 @@ AddToParamLib <- function(r, local_param_lib,reserved_lib){
         else{
           local_param_lib[id] <- value
         }
+
       }
     }
   }
@@ -343,18 +352,17 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
       conc = paste("user(",conc, ")",sep = "")
       found_initial <- TRUE
     }
-    else if(libSBML::Model_getNumRules(model)>0){
+    if(libSBML::Model_getNumRules(model)>0){
       for (j in 1:libSBML::Model_getNumRules(model)) {
         if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
           if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
             conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
-            conc = paste("user(",conc, ")",sep = "")
             found_initial <- TRUE
           }
         }
       }
     }
-    else if(libSBML::Model_getNumInitialAssignments(model)>0){
+    if(libSBML::Model_getNumInitialAssignments(model)>0){
       for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
         if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id)
           conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
@@ -364,7 +372,6 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
     if(!found_initial){
       print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
     }
-    print(conc)
     file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- ", conc, sep = ""), sep = "\n")
   }
   # add rules to file
