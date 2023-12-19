@@ -335,10 +335,12 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
     found_initial <- FALSE
     if(!is.na(libSBML::Species_getInitialAmount(species))){
       conc = libSBML::Species_getInitialAmount(species)
+      conc = paste("user(",conc, ")",sep = "")
       found_initial <- TRUE
     }
     else if(!is.na(libSBML::Species_getInitialConcentration(species))){
       conc = libSBML::Species_getInitialConcentration(species)
+      conc = paste("user(",conc, ")",sep = "")
       found_initial <- TRUE
     }
     else if(libSBML::Model_getNumRules(model)>0){
@@ -346,15 +348,24 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
         if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
           if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
             conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
+            conc = paste("user(",conc, ")",sep = "")
             found_initial <- TRUE
           }
         }
       }
     }
+    else if(libSBML::Model_getNumInitialAssignments(model)>0){
+      for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
+        if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id)
+          conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
+          found_initial <- TRUE
+      }
+    }
     if(!found_initial){
       print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
     }
-    file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- user(",conc, ")", sep = ""), sep = "\n")
+    print(conc)
+    file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- ", conc, sep = ""), sep = "\n")
   }
   # add rules to file
   print("Fetching Rules")
