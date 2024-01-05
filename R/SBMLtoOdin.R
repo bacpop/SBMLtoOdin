@@ -1,20 +1,3 @@
-#' Title
-#'
-#' @param path_to_input A string (Path to an SBML model file).
-#'
-#' @importFrom libSBML readSBMLFromFile SBMLDocument_getModel
-#' @return A libSBML model object.
-#' @export
-#'
-#' @examples
-#' importSBML("/usr/model_files/my_model.xml")
-importSBML <- function(path_to_input){
-  doc = libSBML::readSBMLFromFile(path_to_input)
-  model = libSBML::SBMLDocument_getModel(doc)
-  return(model)
-}
-
-
 
 #' Title
 #'
@@ -313,7 +296,7 @@ sub_ceil <- function(file_content){
 
 #' Title
 #'
-#' @param path_to_input A string (location of SBML model file).
+#' @param model A libSBML model.
 #' @param path_to_output A string (location of odin model file to be created).
 #'
 #' @importFrom libSBML Model_getNumSpecies Species_getId Species_getInitialAmount Species_getInitialConcentration Model_getNumRules Reaction_getNumProducts Rule_getId Model_getRule Model_getNumReactions Reaction_getNumProducts Model_getNumParameters Parameter_getConstant Model_getParameter Parameter_getId Parameter_getValue Model_getNumCompartments Model_getCompartment Compartment_getId Compartment_getSize
@@ -323,14 +306,22 @@ sub_ceil <- function(file_content){
 #'
 #' @examples
 #' SBMLtoOdin("/usr/models/my_SBML_model.xml","/usr/models/my_odin_model.R")
-SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
+SBML_to_odin <- function(model, path_to_output){
   ### test by using
+  # library(devtools)
+  # devtools::document()
   # load_all()
-  # SBMLtoOdin::SBML_to_odin("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
+  # importSBMLfromFile("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
+  # or
+  # importSBMLfromBioModels("MODEL2210070001","../testmodel_output.R")
   # devtools::document()
   # devtools::test()
 
-  model = SBMLtoOdin::importSBML(path_to_input)
+  # does not work anymore:
+  # SBMLtoOdin::SBML_to_odin("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
+  # instead call either the importSBMLfromFile function or the importSBMLfromBioModels function
+
+  #model = SBMLtoOdin::importSBML(path_to_input)
 
   file_str <-""
 
@@ -454,4 +445,42 @@ SBML_to_odin <- function(path_to_input, path_to_output = "odinModel.R"){
   }
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
+}
+
+#' Title
+#'
+#' @param path_to_input A string (Path to an SBML model file).
+#' @param path_to_output A string (Path to the output file).
+#'
+#' @importFrom libSBML readSBMLFromFile SBMLDocument_getModel
+#' @return
+#' @export
+#'
+#' @examples
+#' importSBMLfromFile("/usr/model_files/my_model.xml")
+importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
+  doc = libSBML::readSBMLFromFile(path_to_input)
+  model = libSBML::SBMLDocument_getModel(doc)
+  SBMLtoOdin::SBML_to_odin(model,path_to_output)
+}
+
+#' Title
+#'
+#' @param model_id A string (a valid BioModels id)
+#' @param path_to_output A string (Path to the output file).
+#'
+#' @importFrom libSBML readSBMLFromString SBMLDocument_getModel
+#' @return
+#' @export
+#'
+#' @examples
+importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
+  res1 = GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
+  data = fromJSON(rawToChar(res1$content))
+  filename = data$main[,"name"]
+  filename = gsub(" ", "%20", filename)
+  res2 = GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
+  doc = libSBML::readSBMLFromString(rawToChar(res2$content))
+  model = libSBML::SBMLDocument_getModel(doc)
+  SBMLtoOdin::SBML_to_odin(model,path_to_output)
 }

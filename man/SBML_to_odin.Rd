@@ -4,10 +4,10 @@
 \alias{SBML_to_odin}
 \title{Title}
 \usage{
-SBML_to_odin(path_to_input, path_to_output = "odinModel.R")
+SBML_to_odin(model, path_to_output)
 }
 \arguments{
-\item{path_to_input}{A string (location of SBML model file).}
+\item{model}{A libSBML model.}
 
 \item{path_to_output}{A string (location of odin model file to be created).}
 }
