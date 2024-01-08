@@ -68,6 +68,7 @@ getSpeciesRule <- function(m, i, species_dic){
 #' @param r An integer.
 #'
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_isSetMath KineticLaw_getMath Model_getNumFunctionDefinitions FunctionDefinition_getId Model_getFunctionDefinition FunctionDefinition_getBody FunctionDefinition_getArgument formulaToString
+#' @importFrom stringr str_trim
 #'
 #' @return
 #' @export
@@ -86,7 +87,7 @@ getFunctionOutput <- function(m, ind, r){
         function_def <- libSBML::formulaToString(libSBML::FunctionDefinition_getBody(libSBML::Model_getFunctionDefinition(m,n-1)))
         formula0 <- strsplit(formula, func_id)[[1]][length(strsplit(formula, func_id)[[1]])]
         formula1 <- strsplit(formula0,"\\(|\\)")[[1]][2]
-        function_call_vars <- strsplit(formula1, ",")[[1]]
+        function_call_vars <- stringr::str_trim(strsplit(formula1, ",")[[1]])
         for (i in 1:length(function_call_vars)) {
           function_def <- gsub(libSBML::formulaToString(libSBML::FunctionDefinition_getArgument(libSBML::Model_getFunctionDefinition(m,n-1),i-1)), function_call_vars[i], function_def)
         }
@@ -470,16 +471,19 @@ importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
 #' @param path_to_output A string (Path to the output file).
 #'
 #' @importFrom libSBML readSBMLFromString SBMLDocument_getModel
+#' @importFrom httr GET
+#' @importFrom jsonlite fromJSON
 #' @return
 #' @export
 #'
 #' @examples
 importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
-  res1 = GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
-  data = fromJSON(rawToChar(res1$content))
+  ### still need to add try.. catch stuff and error messages. If the model does not exist etc.
+  res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
+  data = jsonlite::fromJSON(rawToChar(res1$content))
   filename = data$main[,"name"]
   filename = gsub(" ", "%20", filename)
-  res2 = GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
+  res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
   doc = libSBML::readSBMLFromString(rawToChar(res2$content))
   model = libSBML::SBMLDocument_getModel(doc)
   SBMLtoOdin::SBML_to_odin(model,path_to_output)
