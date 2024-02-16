@@ -51,12 +51,21 @@ getRule <- function(file_content, m, i){
 #' @examples
 #' getSpeciesRule(model,1,dictionary)
 getSpeciesRule <- function(m, i, species_dic){
+  rhs <- libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))
+  #if(grepl("leq",rhs)){
+  #  rhs <- SBMLtoOdin::sub_leq(rhs)
+  #  print(rhs)
+  #}
+  rhs <- gsub("time", "t", rhs)
   if(Rule_getType(libSBML::Model_getRule(m,i-1)) == "RULE_TYPE_SCALAR"){
-    deriv_of_rule <- D(parse(text = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
+    if(grepl("piecewise",rhs)){
+      rhs <- SBMLtoOdin::translate_piecewise(rhs)
+    }
+    deriv_of_rule <- D(parse(text = rhs), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
     species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], deriv_of_rule ,sep = " + ")
   }
   else{
-    species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1))) ,sep = " + ")
+    species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], rhs ,sep = " + ")
   }
   return(species_dic)
 }
@@ -230,24 +239,34 @@ translate_pow <- function(file_content){
 #'
 #' @examples
 translate_piecewise <- function(file_content){
-  piece_expr <- strsplit(file_content,"piecewise")[[1]]
+  #piece_expr <- strsplit(file_content,"piecewise")[[1]]
+  piece_expr <- strsplit(file_content,"piecewise\\(")[[1]]
   new_piece_expr <- ""
   for (i in 2:length(piece_expr)) {
-    piece_expr0 <- stringi::stri_split_fixed(str = piece_expr[i], pattern = "(", n = 3)[[1]]
-    val1 <- strsplit(piece_expr0[2],",")[[1]][1]
-    piece_expr1 <- stringi::stri_split_fixed(str = piece_expr0[3], pattern = ")", n = 3)[[1]]
-    # I should probably write a more general version of this function
-    # potentially one that checks whether lt is part of the expression
-    cond1 <- strsplit(piece_expr1[1],",")[[1]][1]
-    cond2 <- strsplit(piece_expr1[1],",")[[1]][2]
-    val2 <- strsplit(piece_expr1[2],",")[[1]][2]
-    rest1 <- ""
-    if(length(piece_expr1)>2){
-      rest1 <- piece_expr1[[3]]
+    if(grepl("leq",piece_expr[i])){
+      piece_expr[i] <- SBMLtoOdin::sub_leq(piece_expr[i])
     }
-    y_expan <- as.character((as.numeric(val2) - as.numeric(val1))/2)
-    y_shift <- as.character(as.numeric(val1) + as.numeric(y_expan))
-
+    if(grepl("lt",piece_expr[i])){
+      piece_expr[i] <- SBMLtoOdin::sub_lt(piece_expr[i])
+    }
+    piece_expr0 <- stringi::stri_split_fixed(str = piece_expr[i], pattern = ",", n = 3)[[1]]
+    val1 <- piece_expr0[1]
+    if(grepl("<=",piece_expr[i])){
+      cond <- strsplit(piece_expr0[2],"<=")[[1]]
+    }
+    else{
+      cond <- strsplit(piece_expr0[2],"<")[[1]]
+    }
+    cond1 <- cond[1]
+    cond2 <- cond[2]
+    rest <- stringi::stri_split_fixed(piece_expr0[3],")", n=2)[[1]]
+    val2 <- rest[1]
+    rest1 <- ""
+    if(length(rest)>1){
+      rest1 <- rest[2]
+    }
+    y_expan <- paste("(","(",val2, "-", val1, ")/2",")", sep = "")
+    y_shift <- paste("(",val1, "+", y_expan, ")",sep = "")
     new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
   }
   file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
@@ -293,6 +312,45 @@ sub_ceil <- function(file_content){
   file_content <- paste(strsplit(file_content,"ceil")[[1]][1], new_ceil_expr)
   file_content
 
+}
+
+#' Title
+#'
+#' @param file_content A string.
+#'
+#' @return file content
+#' @export
+#'
+#' @examples
+sub_leq <- function(file_content){
+  leq_expr <- strsplit(file_content,"leq\\(")[[1]]
+  leq_expr1 <- stringi::stri_split_fixed(str = leq_expr[2], pattern = ")", n = 2)[[1]]
+  leq_expr2 <- strsplit(leq_expr1[1],",")[[1]]
+  leq_expr3 <- leq_expr2[1]
+  leq_expr4 <- leq_expr2[2]
+  new_str <- paste(leq_expr3, " <= ", leq_expr4,leq_expr1[2], sep = "")
+  file_content <- paste(leq_expr[1],new_str,sep = "")
+  file_content
+}
+
+
+#' Title
+#'
+#' @param file_content A string.
+#'
+#' @return file content A string.
+#' @export
+#'
+#' @examples
+sub_lt <- function(file_content){
+  lt_expr <- strsplit(file_content,"lt\\(")[[1]]
+  lt_expr1 <- stringi::stri_split_fixed(str = lt_expr[2], pattern = ")", n = 2)[[1]]
+  lt_expr2 <- strsplit(lt_expr1[1],",")[[1]]
+  lt_expr3 <- lt_expr2[1]
+  lt_expr4 <- lt_expr2[2]
+  new_str <- paste(lt_expr3, " < ", lt_expr4,lt_expr1[2], sep = "")
+  file_content <- paste(lt_expr[1],new_str,sep = "")
+  file_content
 }
 
 #' Title
@@ -374,9 +432,9 @@ SBML_to_odin <- function(model, path_to_output){
     }
     else{
       file_str <- SBMLtoOdin::getRule(file_str, model, i)
+      # this does not seem right!
     }
   }
-
   # collect reactions
   print("Fetching Reactions")
   param_lib <- c()
@@ -443,6 +501,14 @@ SBML_to_odin <- function(model, path_to_output){
   # substitute ceil by ceiling
   if(grepl("ceil",file_str)){
     file_str <- SBMLtoOdin::sub_ceil(file_str)
+  }
+  # substitute leq by <=
+  if(grepl("leq",file_str)){
+    file_str <- SBMLtoOdin::sub_leq(file_str)
+  }
+  # substitute leq by <=
+  if(grepl("lt",file_str)){
+    file_str <- SBMLtoOdin::sub_lt(file_str)
   }
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
