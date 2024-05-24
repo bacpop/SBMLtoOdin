@@ -1,3 +1,19 @@
+### usage:
+# install libSBML package by (source: libSBML documentation)
+# download R bindings from https://github.com/sbmlteam/libsbml/releases/v5.20.2
+# Using the R GUI
+#From the R menu Packages or Packages & Data (depending on your operating system), select the Package Installer item. You will be presented with an interface that lets you install a local binary package. Use that interface to navigate to the directory where you copied the libSBML archive file, and select the archive file for installation.
+# more info and other options: https://sbml.org/software/libsbml/libsbml-docs/installation/
+
+# library(devtools)
+# devtools::document()
+# load_all()
+# importSBMLfromFile("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
+# or
+# importSBMLfromBioModels("MODEL2210070001","../testmodel_output.R")
+# devtools::document()
+# devtools::test()
+
 
 #' Title
 #'
@@ -507,7 +523,7 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- SBMLtoOdin::sub_leq(file_str)
   }
   # substitute leq by <=
-  if(grepl("lt",file_str)){
+  if(grepl("lt\\(",file_str)){
     file_str <- SBMLtoOdin::sub_lt(file_str)
   }
   # write information into odin.dust file
