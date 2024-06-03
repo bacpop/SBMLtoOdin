@@ -77,6 +77,9 @@ getSpeciesRule <- function(m, i, species_dic){
     if(grepl("piecewise",rhs)){
       rhs <- SBMLtoOdin::translate_piecewise(rhs)
     }
+    if(grepl("pow\\(",rhs)){
+      rhs <- translate_pow(rhs)
+    }
     deriv_of_rule <- D(parse(text = rhs), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
     species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], deriv_of_rule ,sep = " + ")
   }
@@ -230,16 +233,20 @@ getFunctionParams <- function(file_content, r, param_lib, reserved_lib){
 #' @examples
 translate_pow <- function(file_content){
   while(grepl("pow\\(",file_content)){
-    pow_expr <- stringi::stri_split_fixed(str = file_content, pattern = "pow(", n = 2)[[1]][2]
-    pow_expr1 <- stringi::stri_split_fixed(str = pow_expr, pattern = ")", n = 2)[[1]][1]
-    pow_rest <- ""
-    if(length(stringi::stri_split_fixed(str = pow_expr, pattern = ")", n = 2)[[1]])>1){
-      pow_rest <- stringi::stri_split_fixed(str = pow_expr, pattern = ")", n = 2)[[1]][2]
+    pow_expr <- regmatches(file_content, gregexpr("pow(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]] # find power expression
+    for (i in 1:length(pow_expr)) {
+    pow_expr0 <- stringi::stri_split_fixed(str = pow_expr[i], pattern = "pow(", n = 2)[[1]][2] # cut of "pow(" at beginning
+    pow_expr1 <- strsplit(pow_expr0, ",\\s*(?=[^,]+$)", perl=TRUE) # split expression into base and exponent
+    #pow_expr1 <- stringi::stri_split_fixed(str = pow_expr0, pattern = ")", n = 2)[[1]][1]
+
+    pow_base <- pow_expr1[[1]][1] # assign base
+    pow_exponent <- strsplit(pow_expr1[[1]][2],"\\)\\s*(?=[^)]*$)", perl=TRUE)[[1]][1] # assign exponent
+    new_pow_expr <- paste("(",pow_base, ")^(", pow_exponent,")", sep="") # put expression together
+
+    in_front_pow <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][1] # find part that was in front of power expression
+    pow_rest <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][2]
+    file_content <- paste(stringi::stri_split_fixed(str = file_content, pattern = "pow", n = 2)[[1]][1], new_pow_expr, pow_rest, sep = "") # put everything together
     }
-    pow_base <- strsplit(pow_expr1,",")[[1]][1]
-    pow_exponent <- strsplit(pow_expr1,",")[[1]][2]
-    new_pow_expr <- paste("(",pow_base, ")^(", pow_exponent,")", sep="")
-    file_content <- paste(stringi::stri_split_fixed(str = file_content, pattern = "pow", n = 2)[[1]][1], new_pow_expr, pow_rest, sep = "")
   }
   file_content
 }
