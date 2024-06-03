@@ -39,10 +39,115 @@ for (i in 1:ImportError) {
 ### issue resolved
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 # "Input null"
-
+# length(which(ImportError_messages == "Input null"))
+# [1] 85
+# after fixing the particular error with getFunctionOutput: [1] 12 :-)
 ImportError_messages
 
-tryCatch( { importSBMLfromBioModels(ImportError_ids[2],"../TestModel.R") }
+# still have warning messages for ImportError_ids[7] (BIOMD0000000174) (same params defined twice with different variables)
+
+############
+# just for testing whichever model/error I am trying to solve at the moment
+# basically let's me run the R package bit by bit which helps with trouble shooting and finding the exact error
+
+tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
 importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R")
+model_id <- ImportError_ids[7]
+res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
+data = jsonlite::fromJSON(rawToChar(res1$content))
+filename = data$main[,"name"]
+filename = gsub(" ", "%20", filename)
+res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
+doc = libSBML::readSBMLFromString(rawToChar(res2$content))
+model = libSBML::SBMLDocument_getModel(doc)
+
+file_str <-""
+
+dic_react <- c()
+# add initial values for species
+print("Fetching Species")
+for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
+  species = libSBML::Model_getSpecies(model, i-1)
+  id = libSBML::Species_getId(species)
+  dic_react[id] <- 0
+  found_initial <- FALSE
+  if(!is.na(libSBML::Species_getInitialAmount(species))){
+    conc = libSBML::Species_getInitialAmount(species)
+    conc = paste("user(",conc, ")",sep = "")
+    found_initial <- TRUE
+  }
+  else if(!is.na(libSBML::Species_getInitialConcentration(species))){
+    conc = libSBML::Species_getInitialConcentration(species)
+    conc = paste("user(",conc, ")",sep = "")
+    found_initial <- TRUE
+  }
+  if(libSBML::Model_getNumRules(model)>0){
+    for (j in 1:libSBML::Model_getNumRules(model)) {
+      if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
+        if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
+          conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
+          found_initial <- TRUE
+        }
+      }
+    }
+  }
+  if(libSBML::Model_getNumInitialAssignments(model)>0){
+    for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
+      if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id)
+        conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
+      found_initial <- TRUE
+    }
+  }
+  if(!found_initial){
+    print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
+  }
+  file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- ", conc, sep = ""), sep = "\n")
+}
+# add rules to file
+print("Fetching Rules")
+for (i in seq_len(libSBML::Model_getNumRules(model))) {
+  if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
+    dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react)
+  }
+  else{
+    file_str <- SBMLtoOdin::getRule(file_str, model, i)
+    # this does not seem right!
+  }
+}
+# collect reactions
+print("Fetching Reactions")
+param_lib <- c()
+reserved_names_lib <- c()
+reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8")] <- c("i_", "j_", "k_", "l_", "i5_", "i6_", "i7_", "i8_")
+for (i in seq_len(libSBML::Model_getNumReactions(model))){
+  for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
+    id_prod <- libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
+
+    dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+    # former version. I will have to test what happens when reaction does not behave according to kinetic law
+    #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+  }
+  for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
+    id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
+    dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+    # former version. I will have to test what happens when reaction does not behave according to kinetic law
+    #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+
+  }
+  # get Parameters for reaction
+  file_str <- SBMLtoOdin::getFunctionParams(file_str, libSBML::Model_getReaction(model, i-1),param_lib,reserved_names_lib)
+  param_lib <- SBMLtoOdin::AddToParamLib(libSBML::Model_getReaction(model, i-1), param_lib,reserved_names_lib)
+}
+### special case: there are no reactions in the model.
+# or maybe there are reactions that are defined through rules rather than reactions.
+# add reactions, one per product
+for (i in names(dic_react)){
+  file_str <- paste(file_str, paste("deriv(",i,")", " <- ", dic_react[i], sep = ""), sep = "\n")
+}
+#print(file_str)
+# Call function that replaces pow() by ^ if necessary
+if(grepl("pow\\(",file_str)){
+  file_str <- translate_pow(file_str)
+}
