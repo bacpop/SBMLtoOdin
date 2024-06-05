@@ -25,6 +25,17 @@ OdinError # 482
 ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
 
+ImportError2 <- 0
+OdinError2 <- 0
+non_import_error_models <- all_biomod_ids[1:1073][! all_biomod_ids[1:1073] %in% ImportError_ids[1:ImportError]]
+ImportError_ids2 <- rep(NA,1073)
+OdinError <- rep(NA,1073)
+for (i in 1:length(non_import_error_models)) {
+
+  tryCatch( { importSBMLfromBioModels(non_import_error_models[i],"../TestModel.R") }, error = function(w) { print("ImportSBML error"); ImportError2 <<- ImportError2 + 1; ImportError_ids2[ImportError2] <<-  non_import_error_models[i]}, warning = function(w) { print("ImportSBML warning") })
+
+  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError2 <<- OdinError2 +1; OdinError_ids[OdinError2] <<-  non_import_error_models[i] })
+}
 # import fails in 15% of the cases
 # running odin fails in 45% of the cases
 ImportError_messages <- rep(NA, ImportError)
@@ -37,14 +48,25 @@ for (i in 1:ImportError) {
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
 # needed to add a call to translate_pow to it and then solved a number of issue
 ### issue resolved
+
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
+
 # "Input null"
 # length(which(ImportError_messages == "Input null"))
 # [1] 85
 # after fixing the particular error with getFunctionOutput: [1] 12 :-)
+
+# embedded nul in string
+# length(which(regmatches(ImportError_messages, gregexpr("embedded nul in string", ImportError_messages, perl=TRUE)) == "embedded nul in string"))
+# [1] 8
+# after correction: [1] 0
+# this is not fixed yet.
+
 ImportError_messages
 
 # still have warning messages for ImportError_ids[7] (BIOMD0000000174) (same params defined twice with different variables)
+
+# floor function does not have a derivative...
 
 ############
 # just for testing whichever model/error I am trying to solve at the moment
@@ -53,8 +75,8 @@ ImportError_messages
 tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
-importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R")
-model_id <- ImportError_ids[7]
+importSBMLfromBioModels(ImportError_ids[151],"../TestModel.R")
+model_id <- ImportError_ids[151]
 res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
 data = jsonlite::fromJSON(rawToChar(res1$content))
 filename = data$main[,"name"]

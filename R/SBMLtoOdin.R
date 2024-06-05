@@ -572,6 +572,24 @@ importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
 #' @examples
 importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   ### still need to add try.. catch stuff and error messages. If the model does not exist etc.
+  #res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
+  #data_1 = res1$content
+  #data_2 = data_1[!data_1=='00']
+  #data_2 = as.raw(res1$content)
+  #data = jsonlite::fromJSON(rawToChar(data_2))
+  #data = jsonlite::fromJSON(rawToChar(res1$content))
+
+  #filename = data$main[,"name"]
+  #filename = gsub(" ", "%20", filename)
+  #res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
+  #data_1 = res2$content
+  #data_2 = data_1[!data_1=='00']
+  #data_2 = as.raw(res2$content)
+  #doc = libSBML::readSBMLFromString(data_2)
+  #doc = libSBML::readSBMLFromString(res2$content)
+  #model = libSBML::SBMLDocument_getModel(doc)
+  #SBMLtoOdin::SBML_to_odin(model,path_to_output)
+
   res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
   data = jsonlite::fromJSON(rawToChar(res1$content))
   filename = data$main[,"name"]
