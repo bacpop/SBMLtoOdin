@@ -60,6 +60,10 @@ for (i in 1:ImportError) {
 # but still some remaining: 24 26 27 28 30 32 33 34 35 36
 
 # still problems with 32, 34, 35, 36
+# model 32 "BIOMD0000001046" is not an ode (constraint-based modelling). But I am not sure that this information is given anywhere
+# model 34 "BIOMD0000001062" is a metabolic network
+# model 35 "BIOMD0000001063" is a metabolic network
+# model 36 "BIOMD0000001064" is a constraint-based model
 
 # embedded nul in string
 #grep('embedded nul in string', ImportError_messages)
@@ -83,8 +87,8 @@ ImportError_messages
 tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
-importSBMLfromBioModels(ImportError_ids[24],"../TestModel.R")
-model_id <- ImportError_ids[24]
+importSBMLfromBioModels(ImportError_ids[34],"../TestModel.R")
+model_id <- ImportError_ids[34]
 res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
 data = jsonlite::fromJSON(rawToChar(res1$content))
 filename = data$main[,"name"]
@@ -152,7 +156,9 @@ param_lib <- c()
 reserved_names_lib <- c()
 reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8")] <- c("i_", "j_", "k_", "l_", "i5_", "i6_", "i7_", "i8_")
 for (i in seq_len(libSBML::Model_getNumReactions(model))){
+  print(paste("Reaction",i))
   for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
+    print(paste("Product",j))
     id_prod <- libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
 
     dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
@@ -160,6 +166,7 @@ for (i in seq_len(libSBML::Model_getNumReactions(model))){
     #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
   }
   for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
+    print(paste("Reactant",j))
     id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
     dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
     # former version. I will have to test what happens when reaction does not behave according to kinetic law
