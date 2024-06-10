@@ -594,6 +594,12 @@ importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   data = jsonlite::fromJSON(rawToChar(res1$content))
   filename = data$main[,"name"]
   filename = gsub(" ", "%20", filename)
+
+  # check whether model is in sbml file format, otherwise abort
+  file_ext <- strsplit(filename,"\\.")[[1]][length(strsplit(filename,"\\.")[[1]])]
+  if (file_ext != "sbml"){
+    stop(paste("Model is of file format", file_ext, "instead of sbml. SBMLtoOdin only imports SBML files."))
+  }
   res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
   doc = libSBML::readSBMLFromString(rawToChar(res2$content))
   model = libSBML::SBMLDocument_getModel(doc)

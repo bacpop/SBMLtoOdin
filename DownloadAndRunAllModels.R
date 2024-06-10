@@ -18,7 +18,7 @@ OdinError_ids <- rep(NA,1073)
 for (i in 1:1073) {
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R") }, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
 
-  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
+  #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
 }
 ImportError # 155
 OdinError # 482
@@ -48,6 +48,8 @@ for (i in 1:ImportError) {
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
 # needed to add a call to translate_pow to it and then solved a number of issue
 ### issue resolved
+# but not for other functions! --> try to find an autograd / automatic differentiation tool that can deal with non-diff. functions
+# 1  3  7  8  9 10 11 12 13 21 29 31
 
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 
@@ -55,16 +57,20 @@ for (i in 1:ImportError) {
 # length(which(ImportError_messages == "Input null"))
 # [1] 85
 # after fixing the particular error with getFunctionOutput: [1] 12 :-)
+# but still some remaining: 24 26 27 28 30 32 33 34 35 36 41 42
 
 # embedded nul in string
-# length(which(regmatches(ImportError_messages, gregexpr("embedded nul in string", ImportError_messages, perl=TRUE)) == "embedded nul in string"))
-# [1] 8
-# after correction: [1] 0
-# this is not fixed yet.
+#grep('embedded nul in string', ImportError_messages)
+#[1] 37 38 39 40 43 44 45 46
+# Model ids: "BIOMD0000001066", "BIOMD0000001067", "BIOMD0000001068", "BIOMD0000001069", "BIOMD0000001073", "BIOMD0000001074", "BIOMD0000001075", "BIOMD0000001076"
+# all of them are onnx or zip files. This is not supported by SBMLtoOdin
 
 ImportError_messages
 
 # still have warning messages for ImportError_ids[7] (BIOMD0000000174) (same params defined twice with different variables)
+# I have that issue with many models. I really need to check the priorities of local and global parameter definitions.
+
+# similarly, "Warning: Initial amount and concentration not defined for ..."
 
 # floor function does not have a derivative...
 
@@ -173,3 +179,4 @@ for (i in names(dic_react)){
 if(grepl("pow\\(",file_str)){
   file_str <- translate_pow(file_str)
 }
+
