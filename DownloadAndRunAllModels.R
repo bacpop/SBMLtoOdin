@@ -3,9 +3,9 @@ library(odin)
 library(devtools)
 load_all() # loads functions from SBMLtoOdin package
 #install.packages("rjson")
-library("rjson")
+#library("rjson")
 
-json_data <- fromJSON(file="../all_BioModels.json")
+json_data <- jsonlite::fromJSON(txt ="../all_BioModels.json")
 all_biomod_ids <- json_data[[2]]
 
 # the curated models on BioModels are the first models in the list (model 1 - 1073 at the moment)
@@ -57,12 +57,14 @@ for (i in 1:ImportError) {
 # length(which(ImportError_messages == "Input null"))
 # [1] 85
 # after fixing the particular error with getFunctionOutput: [1] 12 :-)
-# but still some remaining: 24 26 27 28 30 32 33 34 35 36 41 42
+# but still some remaining: 24 26 27 28 30 32 33 34 35 36
+
+# still problems with 32, 34, 35, 36
 
 # embedded nul in string
 #grep('embedded nul in string', ImportError_messages)
-#[1] 37 38 39 40 43 44 45 46
-# Model ids: "BIOMD0000001066", "BIOMD0000001067", "BIOMD0000001068", "BIOMD0000001069", "BIOMD0000001073", "BIOMD0000001074", "BIOMD0000001075", "BIOMD0000001076"
+#[1] 37 38 39 40 41 42 43 44 45 46
+# Model ids: "BIOMD0000001066", "BIOMD0000001067", "BIOMD0000001068", "BIOMD0000001069", "BIOMD0000001070", "BIOMD0000001071", "BIOMD0000001073", "BIOMD0000001074", "BIOMD0000001075", "BIOMD0000001076"
 # all of them are onnx or zip files. This is not supported by SBMLtoOdin
 
 ImportError_messages
@@ -81,8 +83,8 @@ ImportError_messages
 tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
-importSBMLfromBioModels(ImportError_ids[151],"../TestModel.R")
-model_id <- ImportError_ids[151]
+importSBMLfromBioModels(ImportError_ids[24],"../TestModel.R")
+model_id <- ImportError_ids[24]
 res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
 data = jsonlite::fromJSON(rawToChar(res1$content))
 filename = data$main[,"name"]
