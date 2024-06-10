@@ -73,15 +73,35 @@ getSpeciesRule <- function(m, i, species_dic){
   #  print(rhs)
   #}
   rhs <- gsub("time", "t", rhs)
-  if(Rule_getType(libSBML::Model_getRule(m,i-1)) == "RULE_TYPE_SCALAR"){
-    if(grepl("piecewise",rhs)){
-      rhs <- SBMLtoOdin::translate_piecewise(rhs)
+  if(libSBML::Rule_getType(libSBML::Model_getRule(m,i-1)) == "RULE_TYPE_SCALAR"){
+    # need to calculate derivative
+    # if this is a custom function, I need to first determine the real rhs (from the function call)
+    if(is.element(strsplit(rhs,"\\(")[[1]][1],func_def_dict)){
+      rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, strsplit(rhs,"\\(")[[1]][1])
+
+      if(grepl("piecewise",rhs)){
+        rhs <- SBMLtoOdin::translate_piecewise(rhs)
+      }
+      if(grepl("pow\\(",rhs)){
+        rhs <- translate_pow(rhs)
+      }
+      if(grepl("root\\(",rhs)){
+        rhs <- translate_root(rhs)
+      }
     }
-    if(grepl("pow\\(",rhs)){
-      rhs <- translate_pow(rhs)
+    else{
+      if(grepl("piecewise",rhs)){
+        rhs <- SBMLtoOdin::translate_piecewise(rhs)
+      }
+      if(grepl("pow\\(",rhs)){
+        rhs <- translate_pow(rhs)
+      }
+      if(grepl("root\\(",rhs)){
+        rhs <- translate_root(rhs)
+      }
+      deriv_of_rule <- D(parse(text = rhs), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
+      species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], deriv_of_rule ,sep = " + ")
     }
-    deriv_of_rule <- D(parse(text = rhs), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
-    species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], deriv_of_rule ,sep = " + ")
   }
   else{
     species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], rhs ,sep = " + ")
@@ -125,6 +145,51 @@ getFunctionOutput <- function(m, ind, r){
     }
   }
   formula
+}
+
+#' Title
+#'
+#' @param m A libSBML model object.
+#' @param ind A string.
+#' @param r A string.
+#'
+#' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_isSetMath KineticLaw_getMath Model_getNumFunctionDefinitions FunctionDefinition_getId Model_getFunctionDefinition FunctionDefinition_getBody FunctionDefinition_getArgument formulaToString
+#'
+#' @return
+#' @export
+#'
+#' @examples
+getFunctionOutputForRules <- function(m, formula, func_id){
+  #if (libSBML::Reaction_isSetKineticLaw(r)) {
+  #  k = libSBML::Reaction_getKineticLaw(r);
+  #  if (libSBML::KineticLaw_isSetMath(k)) {
+  #    formula = libSBML::formulaToString(libSBML::KineticLaw_getMath(k));
+  #  }
+    for (n in seq_len(libSBML::Model_getNumFunctionDefinitions(m))){
+      #find the correct function definition
+      if(grepl(libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1)), func_id)){
+        #func_id <- libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1))
+        function_def <- libSBML::formulaToString(libSBML::FunctionDefinition_getBody(libSBML::Model_getFunctionDefinition(m,n-1)))
+
+        func_args_dict <- rep(NA, libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))
+        args_call <- strsplit(formula,"\\(|\\)")[[1]][2]
+        func_args_dict <- stringr::str_split_fixed(args_call,",",libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))[1,]
+        for (i in seq_len(libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))) {
+          names(func_args_dict)[i] <- libSBML::formulaToString(libSBML::FunctionDefinition_getArgument(libSBML::Model_getFunctionDefinition(m,n-1),i-1))
+        }
+
+
+        #formula0 <- strsplit(formula, func_id)[[1]][length(strsplit(formula, func_id)[[1]])]
+        #formula1 <- strsplit(formula0,"\\(|\\)")[[1]][2]
+        #function_call_vars <- stringr::str_trim(strsplit(formula1, ",")[[1]])
+        for (i in 1:length(func_args_dict)) {
+          function_def <- gsub(names(func_args_dict)[i], func_args_dict[i], function_def)
+        }
+        #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
+        #formula <- gsub(formula2, function_def, formula)
+      }
+    }
+  function_def
 }
 
 #' Title
@@ -246,6 +311,36 @@ translate_pow <- function(file_content){
     in_front_pow <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][1] # find part that was in front of power expression
     pow_rest <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][2]
     file_content <- paste(stringi::stri_split_fixed(str = file_content, pattern = "pow", n = 2)[[1]][1], new_pow_expr, pow_rest, sep = "") # put everything together
+    }
+  }
+  file_content
+}
+
+#' Title
+#'
+#' @param file_content A string.
+#'
+#' @importFrom stringi stri_split_fixed
+#'
+#' @return
+#' @export
+#'
+#' @examples
+translate_root <- function(file_content){
+  while(grepl("root\\(",file_content)){
+    root_expr <- regmatches(file_content, gregexpr("root(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]] # find root expression
+    for (i in 1:length(root_expr)) {
+      root_expr0 <- stringi::stri_split_fixed(str = root_expr[i], pattern = "root(", n = 2)[[1]][2] # cut of "root(" at beginning
+      root_expr1 <- strsplit(root_expr0, ",\\s*(?=[^,]+$)", perl=TRUE) # split expression into base and exponent
+      #root_expr1 <- stringi::stri_split_fixed(str = root_expr0, pattern = ")", n = 2)[[1]][1]
+
+      root_base <- root_expr1[[1]][1] # assign base
+      root_exponent <- strsplit(root_expr1[[1]][2],"\\)\\s*(?=[^)]*$)", perl=TRUE)[[1]][1] # assign exponent
+      new_root_expr <- paste("(",root_exponent, ")^(1/(", root_base,"))", sep="") # put expression together
+
+      in_front_root <- stringi::stri_split_fixed(str = file_content, root_expr[i], n=2)[[1]][1] # find part that was in front of root expression
+      root_rest <- stringi::stri_split_fixed(str = file_content, root_expr[i], n=2)[[1]][2]
+      file_content <- paste(stringi::stri_split_fixed(str = file_content, pattern = "root", n = 2)[[1]][1], new_root_expr, root_rest, sep = "") # put everything together
     }
   }
   file_content
@@ -447,6 +542,11 @@ SBML_to_odin <- function(model, path_to_output){
     }
     file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- ", conc, sep = ""), sep = "\n")
   }
+  # build library of function definitions
+  func_def_dict <- c()
+  for (i in seq_len(libSBML::Model_getNumFunctionDefinitions(model))) {
+    func_def_dict[i] <- libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(model,i-1))
+  }
   # add rules to file
   print("Fetching Rules")
   for (i in seq_len(libSBML::Model_getNumRules(model))) {
@@ -494,6 +594,9 @@ SBML_to_odin <- function(model, path_to_output){
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
+  }
+  if(grepl("root\\(",file_str)){
+    file_str <- translate_root(file_str)
   }
   # add parameter values
   print("Fetching Parameter Values")

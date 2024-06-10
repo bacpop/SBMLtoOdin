@@ -50,6 +50,13 @@ for (i in 1:ImportError) {
 ### issue resolved
 # but not for other functions! --> try to find an autograd / automatic differentiation tool that can deal with non-diff. functions
 # 1  3  7  8  9 10 11 12 13 21 29 31
+# 1 solved, the rest still needs to be solved:
+# 3 gt "BIOMD0000000173"
+# 7 8 9 10 11 12 13 goldbeter_koshland "BIOMD0000000306" "BIOMD0000000307" "BIOMD0000000309" "BIOMD0000000310" "BIOMD0000000311" "BIOMD0000000312" "BIOMD0000000351"
+### --> add getFunctionForRule somewhere else in the code.
+# 21 floor "BIOMD0000000678"
+# 29 geq "BIOMD0000001030"
+# 31 GK "BIOMD0000001044"
 
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 
@@ -87,8 +94,8 @@ ImportError_messages
 tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
-importSBMLfromBioModels(ImportError_ids[34],"../TestModel.R")
-model_id <- ImportError_ids[34]
+importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R")
+model_id <- ImportError_ids[7]
 res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
 data = jsonlite::fromJSON(rawToChar(res1$content))
 filename = data$main[,"name"]
@@ -142,6 +149,7 @@ for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
 # add rules to file
 print("Fetching Rules")
 for (i in seq_len(libSBML::Model_getNumRules(model))) {
+  print(i)
   if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
     dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react)
   }
