@@ -78,6 +78,11 @@ for (i in 1:ImportError) {
 # Model ids: "BIOMD0000001066", "BIOMD0000001067", "BIOMD0000001068", "BIOMD0000001069", "BIOMD0000001070", "BIOMD0000001071", "BIOMD0000001073", "BIOMD0000001074", "BIOMD0000001075", "BIOMD0000001076"
 # all of them are onnx or zip files. This is not supported by SBMLtoOdin
 
+# --> reduced it down to 38 error messages (3.5%)
+# 10 of those aer onnx or zip files and 4 non-odes (1.3%)
+# that is a pretty decent result
+# implementing a solution for the floor function, geq, and finding the issue for the golbeter function might still be worth it though
+
 ImportError_messages
 
 # still have warning messages for ImportError_ids[7] (BIOMD0000000174) (same params defined twice with different variables)
