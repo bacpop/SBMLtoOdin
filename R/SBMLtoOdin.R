@@ -76,32 +76,36 @@ getSpeciesRule <- function(m, i, species_dic){
   if(libSBML::Rule_getType(libSBML::Model_getRule(m,i-1)) == "RULE_TYPE_SCALAR"){
     # need to calculate derivative
     # if this is a custom function, I need to first determine the real rhs (from the function call)
-    if(is.element(strsplit(rhs,"\\(")[[1]][1],func_def_dict)){
-      rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, strsplit(rhs,"\\(")[[1]][1])
+    for (cust_func in func_def_dict) {
+      if(grepl(cust_func, rhs)){
+        rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, cust_func)
+      }
+    }
+    #if(is.element(strsplit(rhs,"\\(")[[1]][1],func_def_dict)){
+    #  rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, strsplit(rhs,"\\(")[[1]][1])
 
       if(grepl("piecewise",rhs)){
         rhs <- SBMLtoOdin::translate_piecewise(rhs)
       }
       if(grepl("pow\\(",rhs)){
-        rhs <- translate_pow(rhs)
+        rhs <- SBMLtoOdin::translate_pow(rhs)
       }
       if(grepl("root\\(",rhs)){
-        rhs <- translate_root(rhs)
+        rhs <- SBMLtoOdin::translate_root(rhs)
       }
-    }
-    else{
-      if(grepl("piecewise",rhs)){
-        rhs <- SBMLtoOdin::translate_piecewise(rhs)
-      }
-      if(grepl("pow\\(",rhs)){
-        rhs <- translate_pow(rhs)
-      }
-      if(grepl("root\\(",rhs)){
-        rhs <- translate_root(rhs)
-      }
+
+    #else{
+    #  if(grepl("piecewise",rhs)){
+    #    rhs <- SBMLtoOdin::translate_piecewise(rhs)
+    #  }
+    #  if(grepl("pow\\(",rhs)){
+    #    rhs <- translate_pow(rhs)
+    #  }
+    #  if(grepl("root\\(",rhs)){
+    #    rhs <- translate_root(rhs)
+    #  }
       deriv_of_rule <- D(parse(text = rhs), libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)))
       species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], deriv_of_rule ,sep = " + ")
-    }
   }
   else{
     species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- paste(species_dic[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], rhs ,sep = " + ")
@@ -187,9 +191,11 @@ getFunctionOutputForRules <- function(m, formula, func_id){
         }
         #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
         #formula <- gsub(formula2, function_def, formula)
+        formula <- gsub(paste(func_id,"\\(",args_call,"\\)",sep = ""), paste("(",function_def,")",sep=""), formula)
       }
     }
-  function_def
+  #function_def
+  formula
 }
 
 #' Title
@@ -640,6 +646,18 @@ SBML_to_odin <- function(model, path_to_output){
   if(grepl("lt\\(",file_str)){
     file_str <- SBMLtoOdin::sub_lt(file_str)
   }
+  # substitute custom functions
+  for (cust_func in func_def_dict) {
+    if(grepl(cust_func, file_str)){
+      new_str <- strsplit(file_str,cust_func)[[1]][1]
+      for (i in 2:length(strsplit(file_str,cust_func)[[1]])) {
+        replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func,strsplit(file_str,cust_func)[[1]][i],sep = ""), cust_func)
+        new_str <- paste(new_str, replaced_func, sep = "")
+      }
+      file_str <- new_str
+    }
+  }
+
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
 }
