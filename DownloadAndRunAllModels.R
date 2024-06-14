@@ -13,10 +13,12 @@ all_biomod_ids <- json_data[[2]]
 
 ImportError <- 0
 OdinError <- 0
+noImportError <- 0
 ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
+non_error_ids <- rep(NA,1073)
 for (i in 1:1073) {
-  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R") }, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
+  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R"); noImportError <- noImportError +1; non_error_ids[noImportError] <- all_biomod_ids[i] }, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
 
   #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
 }

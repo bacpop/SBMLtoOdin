@@ -37,3 +37,22 @@ matplot(MothesModel_res[, 1], MothesModel_res[, -1], xlab = "Time", ylab = "Numb
         type = "l", col = cols, lty = 1, ylim = c(0,40))
 legend("topright", lwd = 1, col = cols, legend = colnames(MothesModel_res)[-1], bty = "n")
 
+
+### more examples
+example_model_ids <- c("BIOMD0000000002", "BIOMD0000000003", "BIOMD0000000004","BIOMD0000000005","BIOMD0000000006","BIOMD0000000008","BIOMD0000000011","BIOMD0000000012","BIOMD0000000014","BIOMD0000000017")
+
+for (id in example_model_ids) {
+  output_file <- paste("../",id, ".R", sep = "")
+  importSBMLfromBioModels(id,output_file)
+  model_generator <- odin::odin(output_file)
+
+  model <- model_generator$new() #creates object, with parameters if needed
+  model_res <- model$run(0:400) # runs model forward in time, for specified time
+
+  cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+  matplot(model_res[, 1], model_res[, -1], xlab = "Time", ylab = "Number of individuals",
+          type = "l", col = cols, lty = 1)
+  legend("topright", lwd = 1, col = cols, legend = colnames(model_res)[-1], bty = "n")
+}
+
+
