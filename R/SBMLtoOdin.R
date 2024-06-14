@@ -191,7 +191,7 @@ getFunctionOutputForRules <- function(m, formula, func_id){
         }
         #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
         #formula <- gsub(formula2, function_def, formula)
-        formula <- gsub(paste(func_id,"\\(",args_call,"\\)",sep = ""), paste("(",function_def,")",sep=""), formula)
+        formula <- gsub(paste("\\Q",func_id,"(",args_call,")\\E",sep = ""), paste("(",function_def,")",sep=""), formula)
       }
     }
   #function_def
