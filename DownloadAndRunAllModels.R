@@ -13,13 +13,13 @@ all_biomod_ids <- json_data[[2]]
 
 ImportError <- 0
 OdinError <- 0
-noImportError <- 0
 ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
-non_error_ids <- rep(NA,1073)
-for (i in 1:1073) {
-  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R"); noImportError <- noImportError +1; non_error_ids[noImportError] <- all_biomod_ids[i] }, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
-
+OdinError_messages <- rep(NA, 1073)
+#for (i in 1:1073) {
+for (i in 1:200){
+  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
+  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
   #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
 }
 ImportError # 155
@@ -94,15 +94,32 @@ ImportError_messages
 
 # floor function does not have a derivative...
 
+
+
+
+### OdinErrors
+# common ones seem to be:
+# Self referencing expressions not allowed
+# Unknown variable pi (and other unknown variables)
+# delay() must be the only call on the rhs
+# Reserved name 'i' for lhs
+
+# "BIOMD0000000001" Unknown variables
+
+
 ############
 # just for testing whichever model/error I am trying to solve at the moment
 # basically let's me run the R package bit by bit which helps with trouble shooting and finding the exact error
 
-tryCatch( { importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R") }
+tryCatch( { importSBMLfromBioModels("BIOMD0000000001","../TestModel.R") }
           , error = function(m) { message(conditionMessage(m)) })
 
-importSBMLfromBioModels(ImportError_ids[7],"../TestModel.R")
-model_id <- ImportError_ids[7]
+tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { message(conditionMessage(m))})
+
+
+
+importSBMLfromBioModels("BIOMD0000000001","../TestModel.R")
+model_id <- "BIOMD0000000001"
 res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
 data = jsonlite::fromJSON(rawToChar(res1$content))
 filename = data$main[,"name"]

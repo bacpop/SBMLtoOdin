@@ -479,6 +479,25 @@ sub_lt <- function(file_content){
 
 #' Title
 #'
+#' @param file_content A string.
+#'
+#' @return file content A string.
+#' @export
+#'
+#' @examples
+sub_gt <- function(file_content){
+  gt_expr <- strsplit(file_content,"gt\\(")[[1]]
+  gt_expr1 <- stringi::stri_split_fixed(str = gt_expr[2], pattern = ")", n = 2)[[1]]
+  gt_expr2 <- strsplit(gt_expr1[1],",")[[1]]
+  gt_expr3 <- gt_expr2[1]
+  gt_expr4 <- gt_expr2[2]
+  new_str <- paste(gt_expr3, " > ", gt_expr4,gt_expr1[2], sep = "")
+  file_content <- paste(gt_expr[1],new_str,sep = "")
+  file_content
+}
+
+#' Title
+#'
 #' @param model A libSBML model.
 #' @param path_to_output A string (location of odin model file to be created).
 #'
@@ -604,7 +623,10 @@ SBML_to_odin <- function(model, path_to_output){
   if(grepl("root\\(",file_str)){
     file_str <- translate_root(file_str)
   }
+
   # add parameter values
+  # dict for non-constant params
+  var_params_dict <- c()
   print("Fetching Parameter Values")
   for (i in seq_len(libSBML::Model_getNumParameters(model))) {
     if(libSBML::Parameter_getConstant(libSBML::Model_getParameter(model, i-1))){
@@ -612,7 +634,41 @@ SBML_to_odin <- function(model, path_to_output){
       param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
       file_str <- paste(file_str, paste(param_id, " <- user(", libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1)) , ")", sep = ""), sep = "\n")
     }
+    else{
+      param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
+      param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
+      param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
+      var_params_dict[param_id] <- param_val
+    }
   }
+  # add events
+  # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
+  if(libSBML::Model_getNumEvents(model) > 0){
+    for (i in seq_len(libSBML::Model_getNumEvents(model))) {
+      event <- libSBML::Model_getEvent(model,i-1)
+      event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
+      event_trigger <- SBMLtoOdin::sub_gt(event_trigger)
+      event_trigger <- gsub("time", "t", event_trigger)
+      for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
+        event_assign <- libSBML::Event_getEventAssignment(event, j-1)
+        event_var <- libSBML::EventAssignment_getVariable(event_assign)
+        event_var <- SBMLtoOdin::in_reserved_lib(event_var, reserved_names_lib)
+        event_val <- libSBML::formulaToString(libSBML::EventAssignment_getMath(event_assign))
+        non_event_val <- var_params_dict[event_var]
+        var_formula <- paste(event_var, " <- if(", event_trigger, ") ", event_val, " else ",  non_event_val, sep = "")
+        file_str <- paste(file_str, var_formula, sep = "\n")
+      }
+    }
+
+    #libSBML::Model_getEvent(model,0)
+    #libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(libSBML::Model_getEvent(model,0))))
+
+    #libSBML::Event_getNumEventAssignments(libSBML::Model_getEvent(model,0))
+    #libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)
+    #libSBML::EventAssignment_getVariable(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0))
+    #libSBML::formulaToString(libSBML::EventAssignment_getMath(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)))
+  }
+
   # add compartments
   #print(file_str)
   print("Fetching Compartments")
@@ -642,9 +698,13 @@ SBML_to_odin <- function(model, path_to_output){
   if(grepl("leq",file_str)){
     file_str <- SBMLtoOdin::sub_leq(file_str)
   }
-  # substitute leq by <=
+  # substitute lt by <
   if(grepl("lt\\(",file_str)){
     file_str <- SBMLtoOdin::sub_lt(file_str)
+  }
+  # substitute gt by >
+  if(grepl("gt\\(",file_str)){
+    file_str <- SBMLtoOdin::sub_gt(file_str)
   }
   # substitute custom functions
   for (cust_func in func_def_dict) {
