@@ -55,4 +55,6 @@ for (id in example_model_ids) {
   legend("topright", lwd = 1, col = cols, legend = colnames(model_res)[-1], bty = "n")
 }
 
+#Error in SBMLtoOdin::getSpeciesRule(model, i, dic_react) :
+#object 'func_def_dict' not found
 

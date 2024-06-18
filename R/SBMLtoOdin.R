@@ -58,6 +58,7 @@ getRule <- function(file_content, m, i){
 #' @param m
 #' @param i
 #' @param species_dic
+#' @param func_def_dict
 #'
 #' @importFrom libSBML formulaToString Model_getRule Rule_getMath Rule_getId
 #'
@@ -66,7 +67,7 @@ getRule <- function(file_content, m, i){
 #'
 #' @examples
 #' getSpeciesRule(model,1,dictionary)
-getSpeciesRule <- function(m, i, species_dic){
+getSpeciesRule <- function(m, i, species_dic, func_def_dict){
   rhs <- libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))
   #if(grepl("leq",rhs)){
   #  rhs <- SBMLtoOdin::sub_leq(rhs)
@@ -462,6 +463,9 @@ sub_leq <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#'
+#' @importFrom stringr str_count
+#'
 #' @return file content A string.
 #' @export
 #'
@@ -476,6 +480,36 @@ sub_lt <- function(file_content){
   file_content <- paste(lt_expr[1],new_str,sep = "")
   file_content
 }
+# this does not work for all cases but I didn't manage to get the new version working yet
+# example e.g. "x * lt(a,b) + lt(b,c) + 2"
+#sub_lt <- function(file_content){
+  #lt_expr <- strsplit(file_content,"lt\\(|\\)")[[1]]
+#  lt_expr <- strsplit(file_content,"lt\\(")[[1]]
+#  new_str <- lt_expr[1]
+#  for (i in 1:stringr::str_count(file_content, pattern = "lt\\(")) {
+#    lt_expr0 <- paste("(",lt_expr[2],sep = "")
+#    strsplit(lt_expr0,"\\(|\\)")[[1]]
+#    lt_expr1 <- strsplit(lt_expr[i+1],",")[[1]]
+#    lt_expr2 <- lt_expr1[1]
+#    lt_expr3 <- lt_expr1[2]
+#    new_str <- paste(new_str, lt_expr2, " < ", lt_expr3, sep = "")
+#  }
+#  if(length(lt_expr) > (1 + stringr::str_count(file_content, pattern = "lt\\("))){
+#    new_str <- paste(new_str, lt_expr[2 + stringr::str_count(file_content, pattern = "lt\\(")], sep = "")
+#  }
+  #lt_expr1 <- strsplit(lt_expr[2],",")[[1]]
+  #stringi::stri_split_fixed(file_content, "lt(", n = 2)[[1]]
+  #lt_expr0 <- paste("(",lt_expr[2],sep = "")
+  #lt_expr1 <- strsplit(lt_expr0,"\\(|\\)")[[1]][2]
+  #lt_expr1 <- stringi::stri_split_fixed(str = lt_expr[2], pattern = ")", n = 2)[[1]]
+  #lt_expr2 <- strsplit(lt_expr1[1],",")[[1]]
+  #lt_expr3 <- lt_expr2[1]
+  #lt_expr4 <- lt_expr2[2]
+  #new_str <- paste(lt_expr3, " < ", lt_expr4,lt_expr1[2], sep = "")
+  #file_content <- paste(lt_expr[1],new_str,sep = "")
+#  file_content <- new_str
+#  file_content
+#}
 
 #' Title
 #'
@@ -576,7 +610,7 @@ SBML_to_odin <- function(model, path_to_output){
   print("Fetching Rules")
   for (i in seq_len(libSBML::Model_getNumRules(model))) {
     if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
-      dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react)
+      dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react, func_def_dict)
     }
     else{
       file_str <- SBMLtoOdin::getRule(file_str, model, i)
