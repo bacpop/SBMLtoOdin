@@ -132,8 +132,14 @@ ImportError_messages
 #[121] "BIOMD0000000286" "BIOMD0000000287" "BIOMD0000000288" "BIOMD0000000290" "BIOMD0000000293" "BIOMD0000000297"
 #[127] "BIOMD0000000300"
 
-# tackling issues with tanh function
+#OdinError_messages
+
+# tackling issues with tanh function e.g. OdinError_messages[117] "BIOMD0000000279"
+# replaced tanh with if statement
+# will have to check whether odin solver can deal with this and whether I can still compute derivatives (where necessary)
+
 # tackling issues with using 'default' where it is not allowed [109][110][111] ("BIOMD0000000261")
+# fixed the default error
 
 ############
 # just for testing whichever model/error I am trying to solve at the moment

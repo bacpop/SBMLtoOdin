@@ -366,6 +366,8 @@ translate_root <- function(file_content){
 translate_piecewise <- function(file_content){
   #piece_expr <- strsplit(file_content,"piecewise")[[1]]
   piece_expr <- strsplit(file_content,"piecewise\\(")[[1]]
+  #print(piece_expr)
+  # instead of tanh maybe try if statement?
   new_piece_expr <- ""
   for (i in 2:length(piece_expr)) {
     if(grepl("leq",piece_expr[i])){
@@ -374,25 +376,31 @@ translate_piecewise <- function(file_content){
     if(grepl("lt",piece_expr[i])){
       piece_expr[i] <- SBMLtoOdin::sub_lt(piece_expr[i])
     }
+    if(grepl("gt",piece_expr[i])){
+      piece_expr[i] <- SBMLtoOdin::sub_gt(piece_expr[i])
+    }
     piece_expr0 <- stringi::stri_split_fixed(str = piece_expr[i], pattern = ",", n = 3)[[1]]
-    val1 <- piece_expr0[1]
-    if(grepl("<=",piece_expr[i])){
-      cond <- strsplit(piece_expr0[2],"<=")[[1]]
-    }
-    else{
-      cond <- strsplit(piece_expr0[2],"<")[[1]]
-    }
-    cond1 <- cond[1]
-    cond2 <- cond[2]
+    #print(piece_expr0)
+    #val1 <- piece_expr0[1]
+    #if(grepl("<=",piece_expr[i])){
+    #  cond <- strsplit(piece_expr0[2],"<=")[[1]]
+    #}
+    #else{
+    #  cond <- strsplit(piece_expr0[2],"<")[[1]]
+    #}
+    #cond1 <- cond[1]
+    #cond2 <- cond[2]
     rest <- stringi::stri_split_fixed(piece_expr0[3],")", n=2)[[1]]
     val2 <- rest[1]
     rest1 <- ""
     if(length(rest)>1){
       rest1 <- rest[2]
     }
-    y_expan <- paste("(","(",val2, "-", val1, ")/2",")", sep = "")
-    y_shift <- paste("(",val1, "+", y_expan, ")",sep = "")
-    new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
+    #y_expan <- paste("(","(",val2, "-", val1, ")/2",")", sep = "")
+    #y_shift <- paste("(",val1, "+", y_expan, ")",sep = "")
+    #new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
+    new_piece_expr <- paste(new_piece_expr, "if(", piece_expr0[2], ") ", piece_expr0[1], " else ", val2, rest1 ,sep="" )
+    print(new_piece_expr)
   }
   file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
   file_content
