@@ -621,7 +621,7 @@ SBML_to_odin <- function(model, path_to_output){
   print("Fetching Reactions")
   param_lib <- c()
   reserved_names_lib <- c()
-  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8")] <- c("i_", "j_", "k_", "l_", "i5_", "i6_", "i7_", "i8_")
+  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "default")] <- c("i_", "j_", "k_", "l_", "i5_", "i6_", "i7_", "i8_", "default_")
   for (i in seq_len(libSBML::Model_getNumReactions(model))){
     for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
       id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
@@ -720,6 +720,7 @@ SBML_to_odin <- function(model, path_to_output){
   for (reserved_param in names(reserved_names_lib)) {
     file_str <- gsub(paste(" ", reserved_param, " ", sep = ""), paste(" ", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
   }
+  file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   # substitute factorial by gamma function
   if(grepl("factorial",file_str)){
     file_str <- SBMLtoOdin::sub_factorial(file_str)
