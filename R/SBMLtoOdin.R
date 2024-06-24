@@ -188,7 +188,8 @@ getFunctionOutputForRules <- function(m, formula, func_id){
         #formula1 <- strsplit(formula0,"\\(|\\)")[[1]][2]
         #function_call_vars <- stringr::str_trim(strsplit(formula1, ",")[[1]])
         for (i in 1:length(func_args_dict)) {
-          function_def <- gsub(names(func_args_dict)[i], func_args_dict[i], function_def)
+          #function_def <- gsub(names(func_args_dict)[i], func_args_dict[i], function_def)
+          function_def <- gsub(paste("\\b",names(func_args_dict)[i], "\\b", sep = ''), paste(" ", func_args_dict[i], " ", sep = ""), function_def, perl = TRUE)
         }
         #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
         #formula <- gsub(formula2, function_def, formula)
@@ -306,6 +307,7 @@ getFunctionParams <- function(file_content, r, param_lib, reserved_lib){
 translate_pow <- function(file_content){
   while(grepl("pow\\(",file_content)){
     pow_expr <- regmatches(file_content, gregexpr("pow(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]] # find power expression
+    #print(pow_expr)
     for (i in 1:length(pow_expr)) {
     pow_expr0 <- stringi::stri_split_fixed(str = pow_expr[i], pattern = "pow(", n = 2)[[1]][2] # cut of "pow(" at beginning
     pow_expr1 <- strsplit(pow_expr0, ",\\s*(?=[^,]+$)", perl=TRUE) # split expression into base and exponent
@@ -317,7 +319,7 @@ translate_pow <- function(file_content){
 
     in_front_pow <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][1] # find part that was in front of power expression
     pow_rest <- stringi::stri_split_fixed(str = file_content, pow_expr[i], n=2)[[1]][2]
-    file_content <- paste(stringi::stri_split_fixed(str = file_content, pattern = "pow", n = 2)[[1]][1], new_pow_expr, pow_rest, sep = "") # put everything together
+    file_content <- paste(in_front_pow, new_pow_expr, pow_rest, sep = "") # put everything together
     }
   }
   file_content
@@ -750,17 +752,22 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- SBMLtoOdin::sub_gt(file_str)
   }
   # substitute custom functions
+  #print(file_str)
   for (cust_func in func_def_dict) {
     if(grepl(cust_func, file_str)){
       new_str <- strsplit(file_str,cust_func)[[1]][1]
       for (i in 2:length(strsplit(file_str,cust_func)[[1]])) {
         replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func,strsplit(file_str,cust_func)[[1]][i],sep = ""), cust_func)
+        #print(replaced_func)
         new_str <- paste(new_str, replaced_func, sep = "")
       }
       file_str <- new_str
     }
   }
-
+  # Call function that replaces pow() by ^ if necessary
+  if(grepl("pow\\(",file_str)){
+    file_str <- translate_pow(file_str)
+  }
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
 }
