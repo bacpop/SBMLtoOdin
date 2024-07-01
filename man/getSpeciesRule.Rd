@@ -4,10 +4,10 @@
 \alias{getSpeciesRule}
 \title{Title}
 \usage{
-getSpeciesRule(m, i, species_dic)
+getSpeciesRule(m, i, species_dic, func_def_dict)
 }
 \arguments{
-\item{species_dic}{}
+\item{func_def_dict}{}
 }
 \description{
 Title
