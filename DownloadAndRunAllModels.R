@@ -176,6 +176,17 @@ ImportError_messages
 
 # "BIOMD0000000293" fixed (issue with parameters that were defined as constant=FALSE but were, in effect, constant...)
 
+#> OdinError_ids[21]
+#[1] "BIOMD0000000356"
+#> OdinError_messages[21]
+#[1] "Self referencing expressions not allowed (except for arrays)\n\tG_p <- EGP + Ra - E - U_ii - k_1 * G_p + k_2 * G_t # (line 168)"
+# solved :-)
+
+#> OdinError_ids[15]
+#[1] "BIOMD0000000348"
+#> OdinError_messages[15]
+#[1] "Self referencing expressions not allowed (except for arrays)\n\tG3P_init <- G3P_init # (line 72)"
+
 ############
 # just for testing whichever model/error I am trying to solve at the moment
 # basically let's me run the R package bit by bit which helps with trouble shooting and finding the exact error

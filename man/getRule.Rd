@@ -4,7 +4,7 @@
 \alias{getRule}
 \title{Title}
 \usage{
-getRule(file_content, m, i)
+getRule(file_content, m, i, var_params_dict_used, var_params_dict)
 }
 \arguments{
 \item{file_content}{A string.}
@@ -12,6 +12,10 @@ getRule(file_content, m, i)
 \item{m}{A libSBML model object.}
 
 \item{i}{An integer.}
+
+\item{var_params_dict_used}{dictionary that saves param usage}
+
+\item{var_params_dict}{dictionary that has parameter (initial) values}
 }
 \value{
 A string (updated file odin file content)

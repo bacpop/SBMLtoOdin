@@ -20,6 +20,8 @@
 #' @param file_content A string.
 #' @param m A libSBML model object.
 #' @param i An integer.
+#' @param var_params_dict_used dictionary that saves param usage
+#' @param var_params_dict dictionary that has parameter (initial) values
 #'
 #' @importFrom libSBML Rule_getType Model_getRule Rule_getId formulaToString Rule_getMath
 #'
@@ -28,7 +30,7 @@
 #'
 #' @examples
 #' getRule("initial(S1) <- S1_init", model, 1)
-getRule <- function(file_content, m, i, var_params_dict_used){
+getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict){
   rule_type <- libSBML::Rule_getType(libSBML::Model_getRule(m,i-1))
   if(rule_type == "RULE_TYPE_SCALAR"){
     file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
@@ -37,7 +39,8 @@ getRule <- function(file_content, m, i, var_params_dict_used){
   else if(rule_type == "RULE_TYPE_RATE"){
     if(libSBML::Rule_isParameter(libSBML::Model_getRule(m,i-1))){
       # this is a rule for a parameter, not for a species
-      file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+      file_content <- paste(file_content, paste(c(paste("deriv(",libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)),")",sep = ""), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+      file_content <- paste(file_content, "\n", "initial(", libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), ") <- ", var_params_dict[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], sep = "")
       #file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), "1 + 0.5 * t"), collapse = " <- "), sep = "\n")
       var_params_dict_used[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- TRUE
     }
@@ -624,12 +627,18 @@ SBML_to_odin <- function(model, path_to_output){
     if(libSBML::Parameter_getConstant(libSBML::Model_getParameter(model, i-1))){
       param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
       param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
+      if(grepl("_init",param_id)){
+        param_id <- paste(param_id, "1",sep = "")
+      }
       file_str <- paste(file_str, paste(param_id, " <- user(", libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1)) , ")", sep = ""), sep = "\n")
     }
     else{
       param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
       param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
       param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
+      if(grepl("_init",param_id)){
+        param_id <- paste(param_id, "1",sep = "")
+      }
       var_params_dict[param_id] <- param_val
       var_params_dict_used[param_id] <- FALSE
     }
@@ -643,6 +652,7 @@ SBML_to_odin <- function(model, path_to_output){
     id = libSBML::Species_getId(species)
     dic_react[id] <- 0
     found_initial <- FALSE
+    conc <- ""
     if(!is.na(libSBML::Species_getInitialAmount(species))){
       conc = libSBML::Species_getInitialAmount(species)
       conc = paste("user(",conc, ")",sep = "")
@@ -658,6 +668,9 @@ SBML_to_odin <- function(model, path_to_output){
         if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
           if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
             conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
+            if(grepl("_init",conc)){
+              conc <- paste(conc, "1",sep="")
+            }
             found_initial <- TRUE
           }
         }
@@ -665,9 +678,13 @@ SBML_to_odin <- function(model, path_to_output){
     }
     if(libSBML::Model_getNumInitialAssignments(model)>0){
       for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
-        if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id)
+        if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id){
           conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
+          if(grepl("_init",conc)){
+            conc <- paste(conc, "1",sep="")
+          }
           found_initial <- TRUE
+        }
       }
     }
     if(!found_initial){
@@ -680,7 +697,7 @@ SBML_to_odin <- function(model, path_to_output){
   for (i in seq_len(libSBML::Model_getNumFunctionDefinitions(model))) {
     func_def_dict[i] <- libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(model,i-1))
   }
-  print(var_params_dict_used)
+  #print(var_params_dict_used)
   # add rules to file
   print("Fetching Rules")
   for (i in seq_len(libSBML::Model_getNumRules(model))) {
@@ -688,13 +705,13 @@ SBML_to_odin <- function(model, path_to_output){
       dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react, func_def_dict)
     }
     else{
-      return_list <- SBMLtoOdin::getRule(file_str, model, i, var_params_dict_used)
+      return_list <- SBMLtoOdin::getRule(file_str, model, i, var_params_dict_used, var_params_dict)
       file_str <- return_list[[1]]
       var_params_dict_used <- return_list[[2]]
       # this does not seem right!
     }
   }
-  print(var_params_dict_used)
+  #print(var_params_dict_used)
   # collect reactions
   print("Fetching Reactions")
   param_lib <- c()
