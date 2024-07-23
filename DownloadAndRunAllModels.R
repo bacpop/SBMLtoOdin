@@ -187,6 +187,11 @@ ImportError_messages
 #> OdinError_messages[15]
 #[1] "Self referencing expressions not allowed (except for arrays)\n\tG3P_init <- G3P_init # (line 72)"
 
+# looking at models 501-600
+# [3] "../TestModel.R:2:10: unexpected numeric constant\n1: \n2: initial(_2\n
+# "BIOMD0000000510" "BIOMD0000000511" "BIOMD0000000513" "BIOMD0000000514" "BIOMD0000000515" "BIOMD0000000516"
+# the problem seems to be that variable names start with _number
+
 ############
 # just for testing whichever model/error I am trying to solve at the moment
 # basically let's me run the R package bit by bit which helps with trouble shooting and finding the exact error

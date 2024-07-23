@@ -177,7 +177,8 @@ getFunctionOutputForRules <- function(m, formula, func_id){
   #  }
     for (n in seq_len(libSBML::Model_getNumFunctionDefinitions(m))){
       #find the correct function definition
-      if(grepl(libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1)), func_id)){
+      #if(grepl(libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1)), func_id)){
+      if((libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1)) == func_id)){
         #func_id <- libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(m,n-1))
         function_def <- libSBML::formulaToString(libSBML::FunctionDefinition_getBody(libSBML::Model_getFunctionDefinition(m,n-1)))
 
@@ -645,11 +646,20 @@ SBML_to_odin <- function(model, path_to_output){
   }
 
   dic_react <- c()
+  bad_names <- c()
   # add initial values for species
   print("Fetching Species")
   for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
     species = libSBML::Model_getSpecies(model, i-1)
     id = libSBML::Species_getId(species)
+    #print("species id")
+    #print(id)
+    if(grepl("^\\_[0-9+]",id, perl = TRUE)){
+      bad_names[id] <- paste("p", id, sep = "")
+    }
+    else if(grepl("^[0-9+]",id, perl = TRUE)){
+      bad_names[id] <- paste("p", id, sep = "")
+    }
     dic_react[id] <- 0
     found_initial <- FALSE
     conc <- ""
@@ -722,6 +732,8 @@ SBML_to_odin <- function(model, path_to_output){
       id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
 
       dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      #print(id_prod)
+      #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
       #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
 
@@ -730,6 +742,8 @@ SBML_to_odin <- function(model, path_to_output){
       id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
 
       dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      #print(id_reac)
+      #print(dic_react[id_reac])
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
       #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
 
@@ -743,6 +757,14 @@ SBML_to_odin <- function(model, path_to_output){
   # add reactions, one per product
   for (i in names(dic_react)){
     file_str <- paste(file_str, paste("deriv(",i,")", " <- ", dic_react[i], sep = ""), sep = "\n")
+  }
+  for (param_name in names(param_lib)) {
+    if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
+      bad_names[param_name] <- paste("p", param_name, sep = "")
+    }
+    else if(grepl("^[0-9+]",param_name, perl = TRUE)){
+      bad_names[param_name] <- paste("p", param_name, sep = "")
+    }
   }
   #print(file_str)
   # Call function that replaces pow() by ^ if necessary
@@ -827,13 +849,27 @@ SBML_to_odin <- function(model, path_to_output){
   }
   # substitute custom functions
   #print(file_str)
+  #print(func_def_dict)
+  #print(grep("v1sub(",file_str, fixed = TRUE))
   for (cust_func in func_def_dict) {
-    if(grepl(cust_func, file_str)){
-      new_str <- strsplit(file_str,cust_func)[[1]][1]
-      for (i in 2:length(strsplit(file_str,cust_func)[[1]])) {
-        replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func,strsplit(file_str,cust_func)[[1]][i],sep = ""), cust_func)
+    if(grepl(paste(cust_func, "(", sep = ""), file_str, fixed = TRUE)){
+      new_str <- strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][1]
+      for (i in 2:length(strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]])) {
+      #for (i in 2:3) {
+        replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), cust_func)
+        #print("to be replaced")
+        #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
+        #print(cust_func)
+        #print(regmatches(paste(cust_func,strsplit(file_str,cust_func)[[1]][i], sep = ""), gregexpr(paste(cust_func,"(\\(([^()]|(?1))*\\))",sep = ""), paste(cust_func,strsplit(file_str,cust_func)[[1]][i], sep = ""), perl=TRUE))[[1]][1])
+        #print(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1])
+        #print("replaced")
         #print(replaced_func)
-        new_str <- paste(new_str, replaced_func, sep = "")
+        #print("regmatch")
+        #print(regmatches(strsplit(file_str,cust_func)[[1]][i], gregexpr("(\\(([^()]|(?1))*\\))", strsplit(file_str,cust_func)[[1]][i], perl=TRUE))[[1]][1])
+        #print(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1])
+        new_str_part <- gsub(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], replaced_func, paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl = TRUE)
+        #new_str <- paste(new_str, replaced_func, sep = "")
+        new_str <- paste(new_str, new_str_part, sep = "")
       }
       file_str <- new_str
     }
@@ -847,6 +883,12 @@ SBML_to_odin <- function(model, path_to_output){
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
+  }
+  for (param_name in names(bad_names)) {
+    #print(param_name)
+    #print(bad_names[param_name])
+    file_str <- gsub(param_name,bad_names[param_name],file_str)
+    #print(file_str)
   }
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
