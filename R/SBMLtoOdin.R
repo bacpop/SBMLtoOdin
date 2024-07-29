@@ -184,23 +184,32 @@ getFunctionOutputForRules <- function(m, formula, func_id){
 
         func_args_dict <- rep(NA, libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))
         args_call <- strsplit(formula,"\\(|\\)")[[1]][2]
-        func_args_dict <- stringr::str_split_fixed(args_call,",",libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))[1,]
-        for (i in seq_len(libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))) {
-          names(func_args_dict)[i] <- libSBML::formulaToString(libSBML::FunctionDefinition_getArgument(libSBML::Model_getFunctionDefinition(m,n-1),i-1))
+        #print(formula)
+        #print(args_call)
+        if(args_call != ""){
+          func_args_dict <- stringr::str_split_fixed(args_call,",",libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))[1,]
+          for (i in seq_len(libSBML::FunctionDefinition_getNumArguments(libSBML::Model_getFunctionDefinition(m,n-1)))) {
+            names(func_args_dict)[i] <- libSBML::formulaToString(libSBML::FunctionDefinition_getArgument(libSBML::Model_getFunctionDefinition(m,n-1),i-1))
+          }
+
+          #formula0 <- strsplit(formula, func_id)[[1]][length(strsplit(formula, func_id)[[1]])]
+          #formula1 <- strsplit(formula0,"\\(|\\)")[[1]][2]
+          #function_call_vars <- stringr::str_trim(strsplit(formula1, ",")[[1]])
+          for (i in 1:length(func_args_dict)) {
+            #function_def <- gsub(names(func_args_dict)[i], func_args_dict[i], function_def)
+            function_def <- gsub(paste("\\b",names(func_args_dict)[i], "\\b", sep = ''), paste(" ", func_args_dict[i], " ", sep = ""), function_def, perl = TRUE)
+          }
+          #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
+          #formula <- gsub(formula2, function_def, formula)
+          formula <- gsub(paste("\\Q",func_id,"(",args_call,")\\E",sep = ""), paste("(",function_def,")",sep=""), formula)
+          #print(formula)
+          }
+        else{
+          formula <- function_def
+          #print(formula)
+        }
         }
 
-
-        #formula0 <- strsplit(formula, func_id)[[1]][length(strsplit(formula, func_id)[[1]])]
-        #formula1 <- strsplit(formula0,"\\(|\\)")[[1]][2]
-        #function_call_vars <- stringr::str_trim(strsplit(formula1, ",")[[1]])
-        for (i in 1:length(func_args_dict)) {
-          #function_def <- gsub(names(func_args_dict)[i], func_args_dict[i], function_def)
-          function_def <- gsub(paste("\\b",names(func_args_dict)[i], "\\b", sep = ''), paste(" ", func_args_dict[i], " ", sep = ""), function_def, perl = TRUE)
-        }
-        #formula2 <- paste(func_id,"\\(",formula1,"\\)", sep="")
-        #formula <- gsub(formula2, function_def, formula)
-        formula <- gsub(paste("\\Q",func_id,"(",args_call,")\\E",sep = ""), paste("(",function_def,")",sep=""), formula)
-      }
     }
   #function_def
   formula
@@ -372,26 +381,66 @@ translate_root <- function(file_content){
 #'
 #' @examples
 translate_piecewise <- function(file_content){
-  #piece_expr <- strsplit(file_content,"piecewise")[[1]]
-  piece_expr <- strsplit(file_content,"piecewise\\(")[[1]]
+  while(grepl("piecewise\\(",file_content)){
+    piece_expr_all <- regmatches(file_content, gregexpr("piecewise(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1] # find piecewise expression
+    #print(piece_expr_all)
+    #piece_expr <- strsplit(file_content,"piecewise")[[1]]
+  # (\\(([^()]|(?1))*\\))
+  piece_expr <- strsplit(piece_expr_all,"piecewise\\(")[[1]]
+  piece_expr_all_new <- piece_expr_all
+  i_test <- 0
+  while(length(piece_expr) > 2 && i_test<10){
+    i_test <- i_test +1
+    #print(length(piece_expr))
+    #print(piece_expr[length(piece_expr)])
+    last_piece <- translate_piecewise(paste("piecewise(", piece_expr[length(piece_expr)], sep = ""))
+    #print(last_piece)
+    piece_expr_all_new <- gsub(paste("piecewise(",piece_expr[length(piece_expr)],sep = ""), last_piece, piece_expr_all_new, fixed = TRUE)
+    #print(piece_expr_all_new)
+    piece_expr <- strsplit(piece_expr_all_new,"piecewise\\(")[[1]]
+  }
+  #piece_expr <- stringi::stri_split_fixed(piece_expr_all,"piecewise(", n=2)[[1]][2]
+  #piece_expr <- regmatches(file_content,"piecewise(\\(([^()]|(?1))*\\))")[[1]]
   #print(piece_expr)
   # instead of tanh maybe try if statement?
   new_piece_expr <- ""
-  for (i in 2:length(piece_expr)) {
+  #for (i in 2:length(piece_expr)) {
     #print(piece_expr[i])
-    if(grepl("leq",piece_expr[i])){
-      piece_expr[i] <- SBMLtoOdin::sub_leq(piece_expr[i])
+  #print(piece_expr)
+  #piece_expr0 <- stringi::stri_split_fixed(str = piece_expr, pattern = ",", n = 4)[[1]]
+  #piece_expr0 <- strsplit(str = piece_expr[2], pattern = ",")[[1]]
+  #last_part <- piece_expr0[length(piece_expr0)]
+  #print(piece_expr0)
+  #if_part <- paste(piece_expr0[2], ",", piece_expr0[3], sep = "")
+  #print(piece_expr[2])
+    while(grepl("geq",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_geq(piece_expr[2])
     }
-    else if(grepl("lt",piece_expr[i])){
-      piece_expr[i] <- SBMLtoOdin::sub_lt(piece_expr[i])
+    while(grepl("leq",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_leq(piece_expr[2])
     }
-    else if(grepl("gt",piece_expr[i])){
-      piece_expr[i] <- SBMLtoOdin::sub_gt(piece_expr[i])
+    while(grepl("lt",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_lt(piece_expr[2])
     }
-    else if(grepl("eq",piece_expr[i])){
-      piece_expr[i] <- SBMLtoOdin::sub_eq_for_comp(piece_expr[i])
+    while(grepl("gt",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_gt(piece_expr[2])
     }
-    piece_expr0 <- stringi::stri_split_fixed(str = piece_expr[i], pattern = ",", n = 3)[[1]]
+    while(grepl("neq",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_neq_for_comp(piece_expr[2])
+    }
+  #print(piece_expr[2])
+    while(grepl("eq",piece_expr[2])){
+      piece_expr[2] <- SBMLtoOdin::sub_eq_for_comp(piece_expr[2])
+    }
+    while(grepl("and",piece_expr[2])){
+     piece_expr[2] <- SBMLtoOdin::sub_and(piece_expr[2])
+   }
+    # to do: add neq
+    #print(piece_expr[2])
+    piece_expr0 <- strsplit(x = piece_expr[2], split = ",")[[1]]
+    if(length(piece_expr0)){
+      if_part <- paste(piece_expr0[2:(length(piece_expr0)-1)], sep = "")
+    }
     #print(piece_expr0)
     #val1 <- piece_expr0[1]
     #if(grepl("<=",piece_expr[i])){
@@ -402,19 +451,24 @@ translate_piecewise <- function(file_content){
     #}
     #cond1 <- cond[1]
     #cond2 <- cond[2]
-    rest <- stringi::stri_split_fixed(piece_expr0[3],")", n=2)[[1]]
-    val2 <- rest[1]
-    rest1 <- ""
-    if(length(rest)>1){
-      rest1 <- rest[2]
-    }
+    #rest <- stringi::stri_split_fixed(piece_expr0[3],")", n=2)[[1]]
+    #val2 <- rest[1]
+    #rest1 <- ""
+    #if(length(rest)>1){
+    #  rest1 <- rest[2]
+    #}
     #y_expan <- paste("(","(",val2, "-", val1, ")/2",")", sep = "")
     #y_shift <- paste("(",val1, "+", y_expan, ")",sep = "")
     #new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
-    new_piece_expr <- paste(new_piece_expr, "if(", piece_expr0[2], ") ", piece_expr0[1], " else ", val2, rest1 ,sep="" )
+    #new_piece_expr <- paste("(",new_piece_expr, "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[4] ,sep="" )
+    new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)] ,sep="" )
     #print(new_piece_expr)
+  #print(new_piece_expr)
+  #}
+  #file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
+  #print(new_piece_expr)
+  file_content <- gsub(piece_expr_all, new_piece_expr, file_content, fixed = TRUE)
   }
-  file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
   file_content
 }
 
@@ -467,14 +521,14 @@ sub_ceil <- function(file_content){
 #' @export
 #'
 #' @examples
-sub_leq <- function(file_content){
-  leq_expr <- strsplit(file_content,"leq\\(")[[1]]
-  leq_expr1 <- stringi::stri_split_fixed(str = leq_expr[2], pattern = ")", n = 2)[[1]]
-  leq_expr2 <- strsplit(leq_expr1[1],",")[[1]]
-  leq_expr3 <- leq_expr2[1]
-  leq_expr4 <- leq_expr2[2]
-  new_str <- paste(leq_expr3, " <= ", leq_expr4,leq_expr1[2], sep = "")
-  file_content <- paste(leq_expr[1],new_str,sep = "")
+sub_and <- function(file_content){
+  and_expr <- regmatches(file_content, gregexpr("and(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  #print(and_expr)
+  and_expr1 <- strsplit(and_expr, ",")[[1]]
+  and_expr1[1] <- gsub("and(", "(", and_expr1[1], fixed = TRUE)
+  new_and <- paste(and_expr1[1], and_expr1[2], sep = " && ")
+  #print(new_and)
+  file_content <- gsub(and_expr, new_and, file_content, fixed = TRUE)
   file_content
 }
 
@@ -487,14 +541,59 @@ sub_leq <- function(file_content){
 #' @export
 #'
 #' @examples
+sub_leq <- function(file_content){
+  leq_expr0 <- regmatches(file_content, gregexpr("leq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  leq_expr <- strsplit(leq_expr0,"leq\\(")[[1]]
+  leq_expr1 <- stringi::stri_split_fixed(str = leq_expr[2], pattern = ")", n = 2)[[1]]
+  leq_expr2 <- strsplit(leq_expr1[1],",")[[1]]
+  leq_expr3 <- leq_expr2[1]
+  leq_expr4 <- leq_expr2[2]
+  new_str <- paste(leq_expr3, " <= ", leq_expr4,leq_expr1[2], sep = "")
+  #file_content <- paste(leq_expr[1],new_str,sep = "")
+  file_content <- gsub(leq_expr0, new_str, file_content, fixed = TRUE)
+  file_content
+}
+
+#' Title
+#'
+#' @param file_content A string.
+#'
+#' @return file content
+#' @export
+#'
+#' @examples
+sub_neq_for_comp <- function(file_content){
+  leq_expr0 <- regmatches(file_content, gregexpr("neq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  leq_expr <- strsplit(leq_expr0,"neq\\(")[[1]]
+  leq_expr1 <- stringi::stri_split_fixed(str = leq_expr[2], pattern = ")", n = 2)[[1]]
+  leq_expr2 <- strsplit(leq_expr1[1],",")[[1]]
+  leq_expr3 <- leq_expr2[1]
+  leq_expr4 <- leq_expr2[2]
+  new_str <- paste(leq_expr3, " != ", leq_expr4,leq_expr1[2], sep = "")
+  #file_content <- paste(leq_expr[1],new_str,sep = "")
+  file_content <- gsub(leq_expr0, new_str, file_content, fixed = TRUE)
+  file_content
+}
+
+#' Title
+#'
+#' @param file_content A string.
+#'
+#' @return file content
+#' @export
+#'
+#' @examples
 sub_eq_for_comp <- function(file_content){
-  leq_expr <- strsplit(file_content,"eq\\(")[[1]]
+  leq_expr0 <- regmatches(file_content, gregexpr("eq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  leq_expr <- strsplit(leq_expr0,"eq\\(")[[1]]
+  #leq_expr <- strsplit(file_content,"eq\\(")[[1]]
   leq_expr1 <- stringi::stri_split_fixed(str = leq_expr[2], pattern = ")", n = 2)[[1]]
   leq_expr2 <- strsplit(leq_expr1[1],",")[[1]]
   leq_expr3 <- leq_expr2[1]
   leq_expr4 <- leq_expr2[2]
   new_str <- paste(leq_expr3, " == ", leq_expr4,leq_expr1[2], sep = "")
-  file_content <- paste(leq_expr[1],new_str,sep = "")
+  #file_content <- paste(leq_expr[1],new_str,sep = "")
+  file_content <- gsub(leq_expr0, new_str, file_content, fixed = TRUE)
   file_content
 }
 
@@ -510,13 +609,16 @@ sub_eq_for_comp <- function(file_content){
 #'
 #' @examples
 sub_lt <- function(file_content){
-  lt_expr <- strsplit(file_content,"lt\\(")[[1]]
+  lt_expr0 <- regmatches(file_content, gregexpr("lt(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  lt_expr <- strsplit(lt_expr0,"lt\\(")[[1]]
+  #lt_expr <- strsplit(file_content,"lt\\(")[[1]]
   lt_expr1 <- stringi::stri_split_fixed(str = lt_expr[2], pattern = ")", n = 2)[[1]]
   lt_expr2 <- strsplit(lt_expr1[1],",")[[1]]
   lt_expr3 <- lt_expr2[1]
   lt_expr4 <- lt_expr2[2]
   new_str <- paste(lt_expr3, " < ", lt_expr4,lt_expr1[2], sep = "")
-  file_content <- paste(lt_expr[1],new_str,sep = "")
+  #file_content <- paste(lt_expr[1],new_str,sep = "")
+  file_content <- gsub(lt_expr0, new_str, file_content, fixed = TRUE)
   file_content
 }
 # this does not work for all cases but I didn't manage to get the new version working yet
@@ -559,13 +661,16 @@ sub_lt <- function(file_content){
 #'
 #' @examples
 sub_gt <- function(file_content){
-  gt_expr <- strsplit(file_content,"gt\\(")[[1]]
+  gt_expr0 <- regmatches(file_content, gregexpr("gt(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  gt_expr <- strsplit(gt_expr0,"gt\\(")[[1]]
+  #gt_expr <- strsplit(file_content,"gt\\(")[[1]]
   gt_expr1 <- stringi::stri_split_fixed(str = gt_expr[2], pattern = ")", n = 2)[[1]]
   gt_expr2 <- strsplit(gt_expr1[1],",")[[1]]
   gt_expr3 <- gt_expr2[1]
   gt_expr4 <- gt_expr2[2]
   new_str <- paste(gt_expr3, " > ", gt_expr4,gt_expr1[2], sep = "")
-  file_content <- paste(gt_expr[1],new_str,sep = "")
+  #file_content <- paste(gt_expr[1],new_str,sep = "")
+  file_content <- gsub(gt_expr0, new_str, file_content, fixed = TRUE)
   file_content
 }
 
@@ -578,13 +683,16 @@ sub_gt <- function(file_content){
 #'
 #' @examples
 sub_geq <- function(file_content){
-  gt_expr <- strsplit(file_content,"geq\\(")[[1]]
+  gt_expr0 <- regmatches(file_content, gregexpr("geq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
+  gt_expr <- strsplit(gt_expr0,"geq\\(")[[1]]
+  #gt_expr <- strsplit(file_content,"geq\\(")[[1]]
   gt_expr1 <- stringi::stri_split_fixed(str = gt_expr[2], pattern = ")", n = 2)[[1]]
   gt_expr2 <- strsplit(gt_expr1[1],",")[[1]]
   gt_expr3 <- gt_expr2[1]
   gt_expr4 <- gt_expr2[2]
   new_str <- paste(gt_expr3, " >= ", gt_expr4,gt_expr1[2], sep = "")
-  file_content <- paste(gt_expr[1],new_str,sep = "")
+  #file_content <- paste(gt_expr[1],new_str,sep = "")
+  file_content <- gsub(gt_expr0, new_str, file_content, fixed = TRUE)
   file_content
 }
 
@@ -616,6 +724,8 @@ SBML_to_odin <- function(model, path_to_output){
   # instead call either the importSBMLfromFile function or the importSBMLfromBioModels function
 
   #model = SBMLtoOdin::importSBML(path_to_input)
+  reserved_names_lib <- c()
+  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "default")] <- c("ixi", "jxj", "kxk", "lxl", "i5xi5", "i6_i6", "i7xi7", "i8xi8", "defaultxdefault")
 
   file_str <-""
 
@@ -700,7 +810,8 @@ SBML_to_odin <- function(model, path_to_output){
     if(!found_initial){
       print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
     }
-    file_str <- paste(file_str, paste("initial(",id,") <- ", id, "_init",sep = ""), paste(id, "_init <- ", conc, sep = ""), sep = "\n")
+    id_tr <- SBMLtoOdin::in_reserved_lib(id, reserved_names_lib)
+    file_str <- paste(file_str, paste("initial(",id_tr,") <- ", id_tr, "_init",sep = ""), paste(id_tr, "_init <- ", conc, sep = ""), sep = "\n")
   }
   # build library of function definitions
   func_def_dict <- c()
@@ -725,8 +836,6 @@ SBML_to_odin <- function(model, path_to_output){
   # collect reactions
   print("Fetching Reactions")
   param_lib <- c()
-  reserved_names_lib <- c()
-  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "default")] <- c("i_", "j_", "k_", "l_", "i5_", "i6_", "i7_", "i8_", "default_")
   for (i in seq_len(libSBML::Model_getNumReactions(model))){
     for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
       id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
@@ -756,7 +865,10 @@ SBML_to_odin <- function(model, path_to_output){
   # or maybe there are reactions that are defined through rules rather than reactions.
   # add reactions, one per product
   for (i in names(dic_react)){
-    file_str <- paste(file_str, paste("deriv(",i,")", " <- ", dic_react[i], sep = ""), sep = "\n")
+    i_tr <- SBMLtoOdin::in_reserved_lib(i, reserved_names_lib)
+    #print(i_tr)
+    #print(dic_react[i])
+    file_str <- paste(file_str, paste("deriv(",i_tr,")", " <- ", paste(dic_react[i], " ", sep = ""), sep = ""), sep = "\n")
   }
   for (param_name in names(param_lib)) {
     if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
@@ -816,17 +928,13 @@ SBML_to_odin <- function(model, path_to_output){
     comp = (libSBML::Model_getCompartment(model,i-1))
     file_str <- paste(file_str, paste(libSBML::Compartment_getId(comp), " <- ", libSBML::Compartment_getSize(comp), sep = ""), sep = "\n")
   }
-  # Call function that replaces piecewise() by a differentiable approximation using tanh(20*x)
+  # Call function that replaces piecewise() by if statement
   #print(file_str)
   if(grepl("piecewise",file_str)){
     file_str <- SBMLtoOdin::translate_piecewise(file_str)
   }
   #substitute all mentions of time by t
   file_str <- gsub("time", "t", file_str)
-  for (reserved_param in names(reserved_names_lib)) {
-    file_str <- gsub(paste(" ", reserved_param, " ", sep = ""), paste(" ", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
-  }
-  file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   # substitute factorial by gamma function
   if(grepl("factorial",file_str)){
     file_str <- SBMLtoOdin::sub_factorial(file_str)
@@ -853,10 +961,13 @@ SBML_to_odin <- function(model, path_to_output){
   #print(grep("v1sub(",file_str, fixed = TRUE))
   for (cust_func in func_def_dict) {
     if(grepl(paste(cust_func, "(", sep = ""), file_str, fixed = TRUE)){
+      #print(cust_func)
       new_str <- strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][1]
       for (i in 2:length(strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]])) {
       #for (i in 2:3) {
+        #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
         replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), cust_func)
+        #print(replaced_func)
         #print("to be replaced")
         #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
         #print(cust_func)
@@ -867,7 +978,9 @@ SBML_to_odin <- function(model, path_to_output){
         #print("regmatch")
         #print(regmatches(strsplit(file_str,cust_func)[[1]][i], gregexpr("(\\(([^()]|(?1))*\\))", strsplit(file_str,cust_func)[[1]][i], perl=TRUE))[[1]][1])
         #print(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1])
-        new_str_part <- gsub(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], replaced_func, paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl = TRUE)
+        new_str_part <- gsub(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], replaced_func, paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), fixed = TRUE)
+
+        #print(new_str_part)
         #new_str <- paste(new_str, replaced_func, sep = "")
         new_str <- paste(new_str, new_str_part, sep = "")
       }
@@ -890,6 +1003,18 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- gsub(param_name,bad_names[param_name],file_str)
     #print(file_str)
   }
+  # this is not very elegant. maybe I should better check whether pi is one of the parameters
+  if(grepl("pi", file_str)){
+    file_str <- paste("pi <- 3.141593", file_str, sep = "\n")
+  }
+  if(grepl("piecewise",file_str)){
+    file_str <- SBMLtoOdin::translate_piecewise(file_str)
+  }
+  for (reserved_param in names(reserved_names_lib)) {
+    #print(reserved_param)
+    file_str <- gsub(paste(" ", reserved_param, " ", sep = ""), paste(" ", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
+  }
+  file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
 }

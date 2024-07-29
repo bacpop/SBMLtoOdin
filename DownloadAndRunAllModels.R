@@ -192,6 +192,17 @@ ImportError_messages
 # "BIOMD0000000510" "BIOMD0000000511" "BIOMD0000000513" "BIOMD0000000514" "BIOMD0000000515" "BIOMD0000000516"
 # the problem seems to be that variable names start with _number
 
+# looking at model 601-700
+# "BIOMD0000000670" problem with reserved param l
+#solved
+# models BIOMD0000000603 - BIOMD0000000607 unexpected ')' always close to if statement
+# solved (issue with if else if statements)
+# "BIOMD0000000622" and "BIOMD0000000630" Unhandled expression deri(v) on lhs
+# solved through one of the previous steps
+# BIOMD0000000669, BIOMD0000000672 unexpected numeric constant
+# again a problem with if statements, this time there seem to be two conditions (if (a and b))
+# solved
+
 ############
 # just for testing whichever model/error I am trying to solve at the moment
 # basically let's me run the R package bit by bit which helps with trouble shooting and finding the exact error
