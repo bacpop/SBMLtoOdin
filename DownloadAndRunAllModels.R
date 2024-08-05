@@ -200,6 +200,9 @@ ImportError_messages
 # does odin even allow that?
 # maybe if I integrate if statements directly in the rhs of deriv
 
+# [6] "Unsupported function: function_for_actCycACdk2_1 BIOMD0000000723
+# there are no commas in the function call of "function_for_actCycACdk2_1". really weird. need to investigate this.
+# [7] "Unsupported functions: Function_for_Reaction_6 BIOMD0000000726
 
 ############
 # just for testing whichever model/error I am trying to solve at the moment

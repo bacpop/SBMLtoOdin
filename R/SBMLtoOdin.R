@@ -903,12 +903,12 @@ SBML_to_odin <- function(model, path_to_output){
 
   # add events
   # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
-  print(libSBML::Model_getNumEvents(model))
+  #print(libSBML::Model_getNumEvents(model))
   if(libSBML::Model_getNumEvents(model) > 0){
     for (i in seq_len(libSBML::Model_getNumEvents(model))) {
       event <- libSBML::Model_getEvent(model,i-1)
       event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
-      print(event_trigger)
+      #print(event_trigger)
       if(grepl("gt",event_trigger)){
         event_trigger <- SBMLtoOdin::sub_gt(event_trigger)
       }
@@ -927,7 +927,6 @@ SBML_to_odin <- function(model, path_to_output){
         file_str <- paste(file_str, var_formula, sep = "\n")
       }
     }
-
     #libSBML::Model_getEvent(model,0)
     #libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(libSBML::Model_getEvent(model,0))))
 
@@ -936,7 +935,7 @@ SBML_to_odin <- function(model, path_to_output){
     #libSBML::EventAssignment_getVariable(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0))
     #libSBML::formulaToString(libSBML::EventAssignment_getMath(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)))
   }
-
+  #print(file_str)
   # add compartments
   #print(file_str)
   print("Fetching Compartments")
@@ -982,6 +981,8 @@ SBML_to_odin <- function(model, path_to_output){
       new_str <- strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][1]
       for (i in 2:length(strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]])) {
       #for (i in 2:3) {
+        #print("found")
+        #print(strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i])
         #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
         replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), cust_func)
         #print(replaced_func)
@@ -995,7 +996,7 @@ SBML_to_odin <- function(model, path_to_output){
         #print("regmatch")
         #print(regmatches(strsplit(file_str,cust_func)[[1]][i], gregexpr("(\\(([^()]|(?1))*\\))", strsplit(file_str,cust_func)[[1]][i], perl=TRUE))[[1]][1])
         #print(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1])
-        new_str_part <- gsub(regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], replaced_func, paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), fixed = TRUE)
+        new_str_part <- gsub(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), replaced_func, paste(cust_func,"(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), fixed = TRUE)
 
         #print(new_str_part)
         #new_str <- paste(new_str, replaced_func, sep = "")
@@ -1004,6 +1005,7 @@ SBML_to_odin <- function(model, path_to_output){
       file_str <- new_str
     }
   }
+  #print(file_str)
   for (p in names(var_params_dict_used)) {
     if(!(var_params_dict_used[p])){
       file_str <- paste(file_str, paste(p, " <- user(", var_params_dict[p] , ")", sep = ""), sep = "\n")
