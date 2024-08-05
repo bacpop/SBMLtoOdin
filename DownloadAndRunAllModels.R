@@ -27,25 +27,6 @@ OdinError # 482
 ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
 
-ImportError2 <- 0
-OdinError2 <- 0
-non_import_error_models <- all_biomod_ids[1:1073][! all_biomod_ids[1:1073] %in% ImportError_ids[1:ImportError]]
-ImportError_ids2 <- rep(NA,1073)
-OdinError <- rep(NA,1073)
-for (i in 1:length(non_import_error_models)) {
-
-  tryCatch( { importSBMLfromBioModels(non_import_error_models[i],"../TestModel.R") }, error = function(w) { print("ImportSBML error"); ImportError2 <<- ImportError2 + 1; ImportError_ids2[ImportError2] <<-  non_import_error_models[i]}, warning = function(w) { print("ImportSBML warning") })
-
-  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError2 <<- OdinError2 +1; OdinError_ids[OdinError2] <<-  non_import_error_models[i] })
-}
-# import fails in 15% of the cases
-# running odin fails in 45% of the cases
-ImportError_messages <- rep(NA, ImportError)
-for (i in 1:ImportError) {
-  tryCatch( { importSBMLfromBioModels(ImportError_ids[i],"../TestModel.R") }
-            , error = function(m) {ImportError_messages[i] <<- as.character((conditionMessage(m))) })
-}
-
 # common error messages:
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
 # needed to add a call to translate_pow to it and then solved a number of issue
@@ -202,6 +183,23 @@ ImportError_messages
 # BIOMD0000000669, BIOMD0000000672 unexpected numeric constant
 # again a problem with if statements, this time there seem to be two conditions (if (a and b))
 # solved
+
+# looking at models 701-800
+# 23 odin errors (0 import errors!)
+# [18] "Reserved name 'k' for lhs\n\tk <- f * exp(-a * t) # (line 33)" "BIOMD0000000764"
+# solved
+# [23] "Reserved name 'do' for lhs\n\tdo <- user(0.01) # (line 15)" "BIOMD0000000801"
+# added "do" and a couple of others to reserved_names_lib
+# [21] "Self referencing expressions not allowed "BIOMD0000000789"
+# not sure that the paper https://link.springer.com/article/10.1007/s11538-018-0424-4 (equations) and the sbml model really are the same
+# anyway, this example made clear that there are persisting and non-persiting triggers
+# the first type will always be one once triggered
+# the second type will be ON when triggered and then turn back off
+# this might be worth implementing
+# this specific model though might be tricky because it actually sets one of the species (ode variables) is set to some value.
+# does odin even allow that?
+# maybe if I integrate if statements directly in the rhs of deriv
+
 
 ############
 # just for testing whichever model/error I am trying to solve at the moment

@@ -30,19 +30,22 @@
 #'
 #' @examples
 #' getRule("initial(S1) <- S1_init", model, 1)
-getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict){
+getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict, reserved_names_lib){
   rule_type <- libSBML::Rule_getType(libSBML::Model_getRule(m,i-1))
   if(rule_type == "RULE_TYPE_SCALAR"){
-    file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
-    var_params_dict_used[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- TRUE
+    param_id <- SBMLtoOdin::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
+    #print(paste(c(param_id, libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "))
+    file_content <- paste(file_content, paste(c(param_id, libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+    var_params_dict_used[param_id] <- TRUE
   }
   else if(rule_type == "RULE_TYPE_RATE"){
     if(libSBML::Rule_isParameter(libSBML::Model_getRule(m,i-1))){
       # this is a rule for a parameter, not for a species
-      file_content <- paste(file_content, paste(c(paste("deriv(",libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)),")",sep = ""), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
-      file_content <- paste(file_content, "\n", "initial(", libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), ") <- ", var_params_dict[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))], sep = "")
+      param_id <- SBMLtoOdin::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
+      file_content <- paste(file_content, paste(c(paste("deriv(",param_id,")",sep = ""), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
+      file_content <- paste(file_content, "\n", "initial(", param_id, ") <- ", var_params_dict[param_id], sep = "")
       #file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), "1 + 0.5 * t"), collapse = " <- "), sep = "\n")
-      var_params_dict_used[libSBML::Rule_getId(libSBML::Model_getRule(m,i-1))] <- TRUE
+      var_params_dict_used[param_id] <- TRUE
     }
     else{
       print("Warning: I cannot deal with rate rules yet\n")
@@ -462,7 +465,7 @@ translate_piecewise <- function(file_content){
     #new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
     #new_piece_expr <- paste("(",new_piece_expr, "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[4] ,sep="" )
     new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)] ,sep="" )
-    #print(new_piece_expr)
+    print(new_piece_expr)
   #print(new_piece_expr)
   #}
   #file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
@@ -725,7 +728,15 @@ SBML_to_odin <- function(model, path_to_output){
 
   #model = SBMLtoOdin::importSBML(path_to_input)
   reserved_names_lib <- c()
-  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "default")] <- c("ixi", "jxj", "kxk", "lxl", "i5xi5", "i6_i6", "i7xi7", "i8xi8", "defaultxdefault")
+  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "auto", "break", "case", "char", "const", "continue", "default",
+                       "do", "double", "enum", "extern", "float", "for", "goto",
+                       "inline", "int", "long", "register", "restrict", "return",
+                       "short", "signed", "sizeof", "static", "struct", "switch", "typedef",
+                       "union", "unsigned", "void", "volatile", "while")] <- c("ixi", "jxj", "kxk", "lxl", "i5xi5", "i6xi6", "i7xi7", "i8xi8", "auto1", "break1", "case1", "char1", "const1", "continue1", "default1",
+                                                                               "do1", "double1", "enum1", "extern1", "float1", "for1", "goto1",
+                                                                               "inline1", "int1", "long1", "register1", "restrict1", "return1",
+                                                                               "short1", "signed1", "sizeof1", "static1", "struct1", "switch1", "typedef1",
+                                                                               "union1", "unsigned1", "void1", "volatile1", "while1")
 
   file_str <-""
 
@@ -745,7 +756,10 @@ SBML_to_odin <- function(model, path_to_output){
     }
     else{
       param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
+      #print("down")
+      #print(param_id)
       param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
+      #print(param_id)
       param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
       if(grepl("_init",param_id)){
         param_id <- paste(param_id, "1",sep = "")
@@ -826,7 +840,7 @@ SBML_to_odin <- function(model, path_to_output){
       dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react, func_def_dict)
     }
     else{
-      return_list <- SBMLtoOdin::getRule(file_str, model, i, var_params_dict_used, var_params_dict)
+      return_list <- SBMLtoOdin::getRule(file_str, model, i, var_params_dict_used, var_params_dict, reserved_names_lib)
       file_str <- return_list[[1]]
       var_params_dict_used <- return_list[[2]]
       # this does not seem right!
@@ -889,10 +903,12 @@ SBML_to_odin <- function(model, path_to_output){
 
   # add events
   # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
+  print(libSBML::Model_getNumEvents(model))
   if(libSBML::Model_getNumEvents(model) > 0){
     for (i in seq_len(libSBML::Model_getNumEvents(model))) {
       event <- libSBML::Model_getEvent(model,i-1)
       event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
+      print(event_trigger)
       if(grepl("gt",event_trigger)){
         event_trigger <- SBMLtoOdin::sub_gt(event_trigger)
       }
@@ -935,6 +951,7 @@ SBML_to_odin <- function(model, path_to_output){
   }
   #substitute all mentions of time by t
   file_str <- gsub("time", "t", file_str)
+  #print(file_str)
   # substitute factorial by gamma function
   if(grepl("factorial",file_str)){
     file_str <- SBMLtoOdin::sub_factorial(file_str)
@@ -1013,6 +1030,10 @@ SBML_to_odin <- function(model, path_to_output){
   for (reserved_param in names(reserved_names_lib)) {
     #print(reserved_param)
     file_str <- gsub(paste(" ", reserved_param, " ", sep = ""), paste(" ", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
+    file_str <- gsub(paste("\n", reserved_param, " ", sep = ""), paste("\n", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
+    file_str <- gsub(paste(" ", reserved_param, "\\)", sep = ""), paste(" ", reserved_names_lib[reserved_param], "\\)", sep = ""), file_str)
+    file_str <- gsub(paste("\\(", reserved_param, " ", sep = ""), paste("\\(", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
+
   }
   file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   # write information into odin.dust file
