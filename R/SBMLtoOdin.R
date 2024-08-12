@@ -81,7 +81,7 @@ getSpeciesRule <- function(m, i, species_dic, func_def_dict){
   #  rhs <- SBMLtoOdin::sub_leq(rhs)
   #  print(rhs)
   #}
-  rhs <- gsub("time", "t", rhs)
+  #rhs <- gsub("time", "t", rhs)
   if(libSBML::Rule_getType(libSBML::Model_getRule(m,i-1)) == "RULE_TYPE_SCALAR"){
     # need to calculate derivative
     # if this is a custom function, I need to first determine the real rhs (from the function call)
@@ -465,7 +465,7 @@ translate_piecewise <- function(file_content){
     #new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
     #new_piece_expr <- paste("(",new_piece_expr, "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[4] ,sep="" )
     new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)] ,sep="" )
-    print(new_piece_expr)
+    #print(new_piece_expr)
   #print(new_piece_expr)
   #}
   #file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
@@ -728,11 +728,11 @@ SBML_to_odin <- function(model, path_to_output){
 
   #model = SBMLtoOdin::importSBML(path_to_input)
   reserved_names_lib <- c()
-  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "auto", "break", "case", "char", "const", "continue", "default",
+  reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "t", "auto", "break", "case", "char", "const", "continue", "default",
                        "do", "double", "enum", "extern", "float", "for", "goto",
                        "inline", "int", "long", "register", "restrict", "return",
                        "short", "signed", "sizeof", "static", "struct", "switch", "typedef",
-                       "union", "unsigned", "void", "volatile", "while")] <- c("ixi", "jxj", "kxk", "lxl", "i5xi5", "i6xi6", "i7xi7", "i8xi8", "auto1", "break1", "case1", "char1", "const1", "continue1", "default1",
+                       "union", "unsigned", "void", "volatile", "while")] <- c("ixi", "jxj", "kxk", "lxl", "i5xi5", "i6xi6", "i7xi7", "i8xi8", "txt", "auto1", "break1", "case1", "char1", "const1", "continue1", "default1",
                                                                                "do1", "double1", "enum1", "extern1", "float1", "for1", "goto1",
                                                                                "inline1", "int1", "long1", "register1", "restrict1", "return1",
                                                                                "short1", "signed1", "sizeof1", "static1", "struct1", "switch1", "typedef1",
@@ -915,7 +915,7 @@ SBML_to_odin <- function(model, path_to_output){
       else if(grepl("geq",event_trigger)){
         event_trigger <- SBMLtoOdin::sub_geq(event_trigger)
       }
-      event_trigger <- gsub("time", "t", event_trigger)
+      #event_trigger <- gsub("time", "t", event_trigger)
       for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
         event_assign <- libSBML::Event_getEventAssignment(event, j-1)
         event_var <- libSBML::EventAssignment_getVariable(event_assign)
@@ -948,8 +948,6 @@ SBML_to_odin <- function(model, path_to_output){
   if(grepl("piecewise",file_str)){
     file_str <- SBMLtoOdin::translate_piecewise(file_str)
   }
-  #substitute all mentions of time by t
-  file_str <- gsub("time", "t", file_str)
   #print(file_str)
   # substitute factorial by gamma function
   if(grepl("factorial",file_str)){
@@ -1038,6 +1036,8 @@ SBML_to_odin <- function(model, path_to_output){
 
   }
   file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
+  #substitute all mentions of time by t
+  file_str <- gsub("time", "t", file_str)
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
 }

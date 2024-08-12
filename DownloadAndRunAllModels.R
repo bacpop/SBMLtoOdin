@@ -18,6 +18,7 @@ OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
 for (i in 1:1073){
+  print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
   #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
@@ -26,7 +27,7 @@ ImportError # 155
 OdinError # 482
 ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
-
+#151 (1-495), 70 (500-750)
 # common error messages:
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
 # needed to add a call to translate_pow to it and then solved a number of issue
@@ -203,6 +204,38 @@ ImportError_messages
 # [6] "Unsupported function: function_for_actCycACdk2_1 BIOMD0000000723
 # there are no commas in the function call of "function_for_actCycACdk2_1". really weird. need to investigate this.
 # [7] "Unsupported functions: Function_for_Reaction_6 BIOMD0000000726
+# both had the same problem (another function in the model had the same parameter set and already replaced the comma-separated parameters by the function output (but no the name))
+
+# [16] "Reserved name 't' for lhs\n\tt <- user(3e+05) # (line 10)"  BIOMD0000000760
+# I added "t" to the reserved_names_lib and pushed replacing time by t to the very end of the script
+
+# now just 12 odin errors for models 701-800
+
+# looking at model 801-900 today (12.08)
+# to start: 20 odin errors
+# "BIOMD0000000805" "BIOMD0000000806" "BIOMD0000000816" "BIOMD0000000817" "BIOMD0000000818" "BIOMD0000000820" "BIOMD0000000825" "BIOMD0000000826" "BIOMD0000000830" "BIOMD0000000833" "BIOMD0000000835" "BIOMD0000000841" "BIOMD0000000849" "BIOMD0000000856" "BIOMD0000000860" "BIOMD0000000862" "BIOMD0000000864" "BIOMD0000000872" "BIOMD0000000899" "BIOMD0000000901"
+# Self referencing expressions not allowed (except for arrays) [an error I've been getting over and over - if these are things that are supposed to be updated in every step, it might be difficult to find a solution but let's see]
+# here: [14] BIOMD0000000856 [16] BIOMD0000000862 [20] BIOMD0000000901
+# model BIOMD0000000901: the problem seems to be that there is an event that changes the value of a species, not of a param - (I had that before, right? solution?)
+# model BIOMD0000000856: possible solution might be to implement _help variable (but I am not sure about what gets evaluated when)
+# model BIOMD0000000862: actually missing else case. But, essentially, also event on species and odin complains that it is not within initial or deriv
+
+# checking whether I can find an easier self-ref example in models 700-800
+# BIOMD0000000711, BIOMD0000000718, BIOMD0000000727, BIOMD0000000789
+# all of them are events for species
+# and BIOMD0000000706, BIOMD0000000734, BIOMD0000000735, BIOMD0000000736 are "variables on lhs must be within deriv() or initial()" errors
+
+# idea for solving this: introduce delay variables
+# e.g. for model BIOMD0000000789
+#V1lag <- delay(V1, 2)
+#V2lag <- delay(V2, 4)
+#deriv(V1) <- 0 + tme * ( a  *   di  *   I ) - tme * dv * V1
+#deriv(V2) <- 0 + tme * ( a  *   di  *   I ) - tme * dv * V2
+#deriv(V) <- if(t >=  2) V1lag else if(t >=  4) V2lag else tme * ( a  *   di  *   I ) - tme * dv * V
+
+# this does not really work for species that are set to a specific value when they (or another variable other than time) are at a specific value
+# this is the case for model BIOMD0000000718 Ini
+# hm
 
 ############
 # just for testing whichever model/error I am trying to solve at the moment
