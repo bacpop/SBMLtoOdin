@@ -771,11 +771,13 @@ SBML_to_odin <- function(model, path_to_output){
 
   dic_react <- c()
   bad_names <- c()
+  boundCond <- c()
   # add initial values for species
   print("Fetching Species")
   for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
     species = libSBML::Model_getSpecies(model, i-1)
     id = libSBML::Species_getId(species)
+    boundCond[id] = libSBML::Species_getBoundaryCondition(species)
     #print("species id")
     #print(id)
     if(grepl("^\\_[0-9+]",id, perl = TRUE)){
@@ -853,8 +855,9 @@ SBML_to_odin <- function(model, path_to_output){
   for (i in seq_len(libSBML::Model_getNumReactions(model))){
     for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
       id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
-
-      dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      if(!boundCond[id_prod]){
+        dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      }
       #print(id_prod)
       #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
@@ -863,8 +866,9 @@ SBML_to_odin <- function(model, path_to_output){
     }
     for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
       id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
-
+      if(!boundCond[id_reac]){
       dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      }
       #print(id_reac)
       #print(dic_react[id_reac])
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
