@@ -855,8 +855,9 @@ SBML_to_odin <- function(model, path_to_output){
   for (i in seq_len(libSBML::Model_getNumReactions(model))){
     for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
       id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
+      #print(libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)))
       if(!boundCond[id_prod]){
-        dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+        dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
       }
       #print(id_prod)
       #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
@@ -867,7 +868,7 @@ SBML_to_odin <- function(model, path_to_output){
     for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
       id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
       if(!boundCond[id_reac]){
-      dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+      dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
       }
       #print(id_reac)
       #print(dic_react[id_reac])
