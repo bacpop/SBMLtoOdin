@@ -11,6 +11,12 @@ importSBMLfromBioModels(model_id, path_to_output = "odinModel.R")
 
 \item{path_to_output}{A string (Path to the output file).}
 }
+\value{
+no return
+}
 \description{
 Title
+}
+\examples{
+importSBMLfromBioModels(biomodels_id, output_directory)
 }

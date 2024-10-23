@@ -19,3 +19,6 @@ A dictionary.
 \description{
 Title
 }
+\examples{
+AddToParamLib(reaction, param_dictionary, reserved_names_dictionary)
+}

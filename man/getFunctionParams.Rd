@@ -21,3 +21,6 @@ A string.
 \description{
 Title
 }
+\examples{
+getFunctionParams(file_content, reaction, param_dictionary, reserved_names_dictionary)
+}

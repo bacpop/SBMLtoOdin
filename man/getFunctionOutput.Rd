@@ -13,6 +13,12 @@ getFunctionOutput(m, ind, r)
 
 \item{r}{An integer.}
 }
+\value{
+function output as string
+}
 \description{
 Title
+}
+\examples{
+getFunctionOutput(model, index, reaction)
 }

@@ -9,6 +9,12 @@ translate_piecewise(file_content)
 \arguments{
 \item{file_content}{A string.}
 }
+\value{
+file content as string
+}
 \description{
 Title
+}
+\examples{
+translate_piecewise("piecewise(1.55, lt(C, 3100), 0.2)")
 }

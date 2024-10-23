@@ -15,3 +15,6 @@ file content A string.
 \description{
 Title
 }
+\examples{
+sub_lt("if(lt(a,2))")
+}

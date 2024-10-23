@@ -7,7 +7,16 @@
 getSpeciesRule(m, i, species_dic, func_def_dict)
 }
 \arguments{
-\item{func_def_dict}{}
+\item{m}{A libSBML model object.}
+
+\item{i}{An integer for the index of the rule.}
+
+\item{species_dic}{The dictionary containing all species.}
+
+\item{func_def_dict}{The dictionary containing all function definitions.}
+}
+\value{
+species dictionary.
 }
 \description{
 Title

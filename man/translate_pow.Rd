@@ -9,6 +9,12 @@ translate_pow(file_content)
 \arguments{
 \item{file_content}{A string.}
 }
+\value{
+file content as string
+}
 \description{
 Title
+}
+\examples{
+translate_pow("pow(2,5)")
 }

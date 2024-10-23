@@ -15,3 +15,6 @@ file content
 \description{
 Title
 }
+\examples{
+sub_eq_for_comp("if(eq(a,2))")
+}

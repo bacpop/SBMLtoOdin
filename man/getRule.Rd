@@ -4,7 +4,14 @@
 \alias{getRule}
 \title{Title}
 \usage{
-getRule(file_content, m, i, var_params_dict_used, var_params_dict)
+getRule(
+  file_content,
+  m,
+  i,
+  var_params_dict_used,
+  var_params_dict,
+  reserved_names_lib
+)
 }
 \arguments{
 \item{file_content}{A string.}

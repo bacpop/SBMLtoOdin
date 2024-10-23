@@ -15,3 +15,6 @@ file content
 \description{
 Title
 }
+\examples{
+sub_and("if(and(b,c))")
+}

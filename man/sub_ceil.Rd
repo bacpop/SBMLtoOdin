@@ -15,3 +15,6 @@ A string.
 \description{
 Title
 }
+\examples{
+sub_ceil("ceil(1.2)")
+}

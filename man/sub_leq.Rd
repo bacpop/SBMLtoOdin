@@ -15,3 +15,6 @@ file content
 \description{
 Title
 }
+\examples{
+sub_leq("if(leq(a,2))")
+}

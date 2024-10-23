@@ -11,6 +11,9 @@ SBML_to_odin(model, path_to_output)
 
 \item{path_to_output}{A string (location of odin model file to be created).}
 }
+\value{
+no return
+}
 \description{
 Title
 }

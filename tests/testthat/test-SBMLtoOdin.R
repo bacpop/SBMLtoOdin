@@ -7,18 +7,31 @@ test_that("parsing power function works", {
   expect_equal(translate_pow("pow(a+3,b)"), "(a+3)^(b)")
   expect_equal(translate_pow("c <- pow(a+3,b)\nd <- pow(10,2+x)"), "c <- (a+3)^(b)\nd <- (10)^(2+x)")
 })
+test_that("in_reserved_lib function works", {
+  expect_equal(in_reserved_lib("a", c("a"=1, "b" =2)), "1")
+  expect_equal(in_reserved_lib("a", c("c"=1, "b" =2)), "a")
+})
 
 # missing test functions:
-# importSBML
+# importSBMLfromFile
+# importSBMLfromBioModels
 # getRule
 # getSpeciesRule
 # getFunctionOutput
-# in_reserved_lib
+# getFunctionOutputForRules
 # AddToParamLib
 # getFunctionParams
+# translate_root
 # translate_piecewise
 # sub_factorial
 # sub_ceil
+# sub_and
+# sub_leq
+# sub_neq_for_comp
+# sub_eq_for_comp
+# sub_lt
+# sub_gt
+# sub_geq
 # SBML_to_odin
 
 

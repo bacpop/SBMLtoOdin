@@ -15,3 +15,6 @@ A string.
 \description{
 Title
 }
+\examples{
+sub_factorial("a + factorial(4)")
+}

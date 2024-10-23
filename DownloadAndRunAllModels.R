@@ -42,6 +42,14 @@ OdinError_ids[1:OdinError]
 # 29 geq "BIOMD0000001030"
 # 31 GK "BIOMD0000001044"
 
+# 06.10.2024
+#ImportError # 36
+#OdinError # 281
+# with 9 models in the intersect
+# so, 308 models result in error in total
+# i.e. 704 can be translated and run successfully
+# that are 70%
+
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 
 # "Input null"
@@ -351,3 +359,65 @@ if(grepl("pow\\(",file_str)){
   file_str <- translate_pow(file_str)
 }
 
+
+# test exporting sbml models
+importSBMLfromFile("../../models/BIOMD0000000809.xml","../../testmodel_output.R")
+doc = libSBML::readSBMLFromFile("../../models/BIOMD0000000809.xml")
+libSBML::writeSBMLToFile(doc, "../../testmodel_output2.xml")
+#libSBML::writeSBMLToString(doc)
+# yes, that works easily.
+# but I'd ideally want a tool that creates SBML based on R code...?
+sbml_document <- SBMLDocument(3, 1)
+model <- SBMLDocument_createModel(sbml_document)
+# Create a compartment
+compartment <- Model_createCompartment(model)
+Compartment_setId(compartment, "c1")
+Compartment_setSize(compartment, 1.0)
+Compartment_setUnits(compartment, "litre")
+
+# Create species S1
+species1 <- Model_createSpecies(model)
+Species_setId(species1, "S1")
+Species_setCompartment(species1, "c1")
+Species_setInitialAmount(species1, 10.0)
+Species_setBoundaryCondition(species1, FALSE)
+
+# Create species S2
+species2 <- Model_createSpecies(model)
+Species_setId(species2, "S2")
+Species_setCompartment(species2, "c1")
+Species_setInitialAmount(species2, 0.0)
+Species_setBoundaryCondition(species2, FALSE)
+
+# Create a reaction R1: S1 -> S2
+reaction <- Model_createReaction(model)
+Reaction_setId(reaction, "R1")
+Reaction_setReversible(reaction, FALSE)
+
+# Add S1 as a reactant
+reactant <- Reaction_createReactant(reaction)
+SimpleSpeciesReference_setSpecies(reactant, "S1")
+
+# Add S2 as a product
+product <- Reaction_createProduct(reaction)
+SimpleSpeciesReference_setSpecies(product, "S2")
+
+# Set stoichiometries
+#SimpleSpeciesReference_setStoichiometry(reactant, 1.0)
+#SimpleSpeciesReference_setStoichiometry(product, 1.0)
+# these two did not work --> let's check whether this breaks SBML requirements
+
+# Create a kinetic law for the reaction: k * S1
+kinetic_law <- Reaction_createKineticLaw(reaction)
+math <- parseFormula("k * S1")
+KineticLaw_setMath(kinetic_law, math)
+
+# Add a parameter 'k' to the kinetic law
+parameter <- KineticLaw_createParameter(kinetic_law)
+Parameter_setId(parameter, "k")
+Parameter_setValue(parameter, 0.1)
+
+# Write the SBML document to an XML file
+writeSBML(sbml_document, "../../minimal_model.xml")
+doc = libSBML::readSBMLFromFile("../../minimal_model.xml")
+SBMLDocument_checkConsistency(doc) # zero errors!

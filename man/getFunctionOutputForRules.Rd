@@ -13,6 +13,12 @@ getFunctionOutputForRules(m, formula, func_id)
 
 \item{r}{A string.}
 }
+\value{
+function output of rule as string
+}
 \description{
 Title
+}
+\examples{
+getFunctionOutputForRules(model, formula, index)
 }

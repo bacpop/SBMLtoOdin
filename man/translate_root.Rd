@@ -9,6 +9,12 @@ translate_root(file_content)
 \arguments{
 \item{file_content}{A string.}
 }
+\value{
+file content as string
+}
 \description{
 Title
+}
+\examples{
+translate_root("root(2,4)")
 }

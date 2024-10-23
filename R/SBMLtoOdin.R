@@ -26,7 +26,6 @@
 #' @importFrom libSBML Rule_getType Model_getRule Rule_getId formulaToString Rule_getMath
 #'
 #' @return A string (updated file odin file content)
-#' @export
 #'
 #' @examples
 #' getRule("initial(S1) <- S1_init", model, 1)
@@ -63,15 +62,14 @@ getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict, r
 
 #' Title
 #'
-#' @param m
-#' @param i
-#' @param species_dic
-#' @param func_def_dict
+#' @param m A libSBML model object.
+#' @param i An integer for the index of the rule.
+#' @param species_dic The dictionary containing all species.
+#' @param func_def_dict The dictionary containing all function definitions.
 #'
 #' @importFrom libSBML formulaToString Model_getRule Rule_getMath Rule_getId
 #'
-#' @return
-#' @export
+#' @return species dictionary.
 #'
 #' @examples
 #' getSpeciesRule(model,1,dictionary)
@@ -131,10 +129,10 @@ getSpeciesRule <- function(m, i, species_dic, func_def_dict){
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_isSetMath KineticLaw_getMath Model_getNumFunctionDefinitions FunctionDefinition_getId Model_getFunctionDefinition FunctionDefinition_getBody FunctionDefinition_getArgument formulaToString
 #' @importFrom stringr str_trim
 #'
-#' @return
-#' @export
+#' @return function output as string
 #'
 #' @examples
+#' getFunctionOutput(model, index, reaction)
 getFunctionOutput <- function(m, ind, r){
   if (libSBML::Reaction_isSetKineticLaw(r)) {
     k = libSBML::Reaction_getKineticLaw(r);
@@ -168,10 +166,10 @@ getFunctionOutput <- function(m, ind, r){
 #'
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_isSetMath KineticLaw_getMath Model_getNumFunctionDefinitions FunctionDefinition_getId Model_getFunctionDefinition FunctionDefinition_getBody FunctionDefinition_getArgument formulaToString
 #'
-#' @return
-#' @export
+#' @return function output of rule as string
 #'
 #' @examples
+#' getFunctionOutputForRules(model, formula, index)
 getFunctionOutputForRules <- function(m, formula, func_id){
   #if (libSBML::Reaction_isSetKineticLaw(r)) {
   #  k = libSBML::Reaction_getKineticLaw(r);
@@ -224,9 +222,9 @@ getFunctionOutputForRules <- function(m, formula, func_id){
 #' @param reserved_lib A dictionary.
 #'
 #' @return A string.
-#' @export
 #'
 #' @examples
+#' in_reserved_lib("a", c("a"="a1", "b"="b1"))
 in_reserved_lib <- function(param_name, reserved_lib){
   if(is.element(param_name, names(reserved_lib))){
     param_name <- as.character(reserved_lib[param_name])
@@ -245,9 +243,9 @@ in_reserved_lib <- function(param_name, reserved_lib){
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_getNumParameters Parameter_getId KineticLaw_getParameter Parameter_getValue
 #'
 #' @return A dictionary.
-#' @export
 #'
 #' @examples
+#' AddToParamLib(reaction, param_dictionary, reserved_names_dictionary)
 AddToParamLib <- function(r, local_param_lib,reserved_lib){
   if (libSBML::Reaction_isSetKineticLaw(r)) {
     k = libSBML::Reaction_getKineticLaw(r);
@@ -256,14 +254,6 @@ AddToParamLib <- function(r, local_param_lib,reserved_lib){
         id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(k,i-1))
         id <- SBMLtoOdin::in_reserved_lib(id, reserved_lib)
         value <- libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(k,i-1))
-        #local_counter <- 2
-        #id_new <- id
-        #while(is.element(id_new, names(local_param_lib))) {
-        #  id_new <- paste(id,"_",as.character(local_counter),sep = "")
-        #  print(id_new)
-        #  local_counter <- local_counter + 1
-        #}
-        #local_param_lib[id_new] <- value
         if(is.element(id, names(local_param_lib))){
           if(value != local_param_lib[id]){
             print(paste("Warning: ", id, "is defined twice with values ", value , " and ", local_param_lib[id], ". Assuming value ", local_param_lib[id], sep = ""))
@@ -290,9 +280,9 @@ AddToParamLib <- function(r, local_param_lib,reserved_lib){
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_getNumParameters Parameter_getId KineticLaw_getParameter Parameter_getValue
 #'
 #' @return A string.
-#' @export
 #'
 #' @examples
+#' getFunctionParams(file_content, reaction, param_dictionary, reserved_names_dictionary)
 getFunctionParams <- function(file_content, r, param_lib, reserved_lib){
   if (libSBML::Reaction_isSetKineticLaw(r)) {
     k = libSBML::Reaction_getKineticLaw(r);
@@ -318,10 +308,10 @@ getFunctionParams <- function(file_content, r, param_lib, reserved_lib){
 #'
 #' @importFrom stringi stri_split_fixed
 #'
-#' @return
-#' @export
+#' @return file content as string
 #'
 #' @examples
+#' translate_pow("pow(2,5)")
 translate_pow <- function(file_content){
   while(grepl("pow\\(",file_content)){
     pow_expr <- regmatches(file_content, gregexpr("pow(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]] # find power expression
@@ -349,10 +339,10 @@ translate_pow <- function(file_content){
 #'
 #' @importFrom stringi stri_split_fixed
 #'
-#' @return
-#' @export
+#' @return file content as string
 #'
 #' @examples
+#' translate_root("root(2,4)")
 translate_root <- function(file_content){
   while(grepl("root\\(",file_content)){
     root_expr <- regmatches(file_content, gregexpr("root(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]] # find root expression
@@ -379,10 +369,10 @@ translate_root <- function(file_content){
 #'
 #' @importFrom stringi stri_split_fixed
 #'
-#' @return
-#' @export
+#' @return file content as string
 #'
 #' @examples
+#' translate_piecewise("piecewise(1.55, lt(C, 3100), 0.2)")
 translate_piecewise <- function(file_content){
   while(grepl("piecewise\\(",file_content)){
     piece_expr_all <- regmatches(file_content, gregexpr("piecewise(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1] # find piecewise expression
@@ -402,20 +392,7 @@ translate_piecewise <- function(file_content){
     #print(piece_expr_all_new)
     piece_expr <- strsplit(piece_expr_all_new,"piecewise\\(")[[1]]
   }
-  #piece_expr <- stringi::stri_split_fixed(piece_expr_all,"piecewise(", n=2)[[1]][2]
-  #piece_expr <- regmatches(file_content,"piecewise(\\(([^()]|(?1))*\\))")[[1]]
-  #print(piece_expr)
-  # instead of tanh maybe try if statement?
   new_piece_expr <- ""
-  #for (i in 2:length(piece_expr)) {
-    #print(piece_expr[i])
-  #print(piece_expr)
-  #piece_expr0 <- stringi::stri_split_fixed(str = piece_expr, pattern = ",", n = 4)[[1]]
-  #piece_expr0 <- strsplit(str = piece_expr[2], pattern = ",")[[1]]
-  #last_part <- piece_expr0[length(piece_expr0)]
-  #print(piece_expr0)
-  #if_part <- paste(piece_expr0[2], ",", piece_expr0[3], sep = "")
-  #print(piece_expr[2])
     while(grepl("geq",piece_expr[2])){
       piece_expr[2] <- SBMLtoOdin::sub_geq(piece_expr[2])
     }
@@ -444,32 +421,7 @@ translate_piecewise <- function(file_content){
     if(length(piece_expr0)){
       if_part <- paste(piece_expr0[2:(length(piece_expr0)-1)], sep = "")
     }
-    #print(piece_expr0)
-    #val1 <- piece_expr0[1]
-    #if(grepl("<=",piece_expr[i])){
-    #  cond <- strsplit(piece_expr0[2],"<=")[[1]]
-    #}
-    #else{
-    #  cond <- strsplit(piece_expr0[2],"<")[[1]]
-    #}
-    #cond1 <- cond[1]
-    #cond2 <- cond[2]
-    #rest <- stringi::stri_split_fixed(piece_expr0[3],")", n=2)[[1]]
-    #val2 <- rest[1]
-    #rest1 <- ""
-    #if(length(rest)>1){
-    #  rest1 <- rest[2]
-    #}
-    #y_expan <- paste("(","(",val2, "-", val1, ")/2",")", sep = "")
-    #y_shift <- paste("(",val1, "+", y_expan, ")",sep = "")
-    #new_piece_expr <-  paste(new_piece_expr, " ", y_shift, " + ", y_expan, " * tanh( 20 * ((", cond1, ") - (", cond2, "))) ", rest1 ,sep="")
-    #new_piece_expr <- paste("(",new_piece_expr, "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[4] ,sep="" )
     new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)] ,sep="" )
-    #print(new_piece_expr)
-  #print(new_piece_expr)
-  #}
-  #file_content <- paste(strsplit(file_content,"piecewise")[[1]][1], new_piece_expr)
-  #print(new_piece_expr)
   file_content <- gsub(piece_expr_all, new_piece_expr, file_content, fixed = TRUE)
   }
   file_content
@@ -482,9 +434,9 @@ translate_piecewise <- function(file_content){
 #' @importFrom stringi stri_split_fixed
 #'
 #' @return A string.
-#' @export
 #'
 #' @examples
+#' sub_factorial("a + factorial(4)")
 sub_factorial <- function(file_content){
   fact_expr <- strsplit(file_content,"factorial")[[1]]
   new_fact_expr <- ""
@@ -501,9 +453,9 @@ sub_factorial <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return A string.
-#' @export
 #'
 #' @examples
+#' sub_ceil("ceil(1.2)")
 sub_ceil <- function(file_content){
   ceil_expr <- strsplit(file_content,"ceil")[[1]]
   new_ceil_expr <- ""
@@ -521,9 +473,9 @@ sub_ceil <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content
-#' @export
 #'
 #' @examples
+#' sub_and("if(and(b,c))")
 sub_and <- function(file_content){
   and_expr <- regmatches(file_content, gregexpr("and(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   #print(and_expr)
@@ -541,9 +493,9 @@ sub_and <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content
-#' @export
 #'
 #' @examples
+#' sub_leq("if(leq(a,2))")
 sub_leq <- function(file_content){
   leq_expr0 <- regmatches(file_content, gregexpr("leq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   leq_expr <- strsplit(leq_expr0,"leq\\(")[[1]]
@@ -562,9 +514,9 @@ sub_leq <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content
-#' @export
 #'
 #' @examples
+#' sub_neq_for_comp("if(neq(a,2))")
 sub_neq_for_comp <- function(file_content){
   leq_expr0 <- regmatches(file_content, gregexpr("neq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   leq_expr <- strsplit(leq_expr0,"neq\\(")[[1]]
@@ -583,9 +535,9 @@ sub_neq_for_comp <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content
-#' @export
 #'
 #' @examples
+#' sub_eq_for_comp("if(eq(a,2))")
 sub_eq_for_comp <- function(file_content){
   leq_expr0 <- regmatches(file_content, gregexpr("eq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   leq_expr <- strsplit(leq_expr0,"eq\\(")[[1]]
@@ -608,9 +560,9 @@ sub_eq_for_comp <- function(file_content){
 #' @importFrom stringr str_count
 #'
 #' @return file content A string.
-#' @export
 #'
 #' @examples
+#' sub_lt("if(lt(a,2))")
 sub_lt <- function(file_content){
   lt_expr0 <- regmatches(file_content, gregexpr("lt(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   lt_expr <- strsplit(lt_expr0,"lt\\(")[[1]]
@@ -660,9 +612,9 @@ sub_lt <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content A string.
-#' @export
 #'
 #' @examples
+#' sub_gt("if(gt(a,2))")
 sub_gt <- function(file_content){
   gt_expr0 <- regmatches(file_content, gregexpr("gt(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   gt_expr <- strsplit(gt_expr0,"gt\\(")[[1]]
@@ -682,9 +634,10 @@ sub_gt <- function(file_content){
 #' @param file_content A string.
 #'
 #' @return file content A string.
-#' @export
+#'
 #'
 #' @examples
+#' sub_geq("if(geq(a,2))")
 sub_geq <- function(file_content){
   gt_expr0 <- regmatches(file_content, gregexpr("geq(\\(([^()]|(?1))*\\))", file_content, perl=TRUE))[[1]][1]
   gt_expr <- strsplit(gt_expr0,"geq\\(")[[1]]
@@ -706,8 +659,8 @@ sub_geq <- function(file_content){
 #'
 #' @importFrom libSBML Model_getNumSpecies Species_getId Species_getInitialAmount Species_getInitialConcentration Model_getNumRules Reaction_getNumProducts Rule_getId Model_getRule Model_getNumReactions Reaction_getNumProducts Model_getNumParameters Parameter_getConstant Model_getParameter Parameter_getId Parameter_getValue Model_getNumCompartments Model_getCompartment Compartment_getId Compartment_getSize KineticLaw_getFormula Reaction_getKineticLaw
 #'
-#' @return
-#' @export
+#' @return no return
+#'
 #'
 #' @examples
 #' SBMLtoOdin("/usr/models/my_SBML_model.xml","/usr/models/my_odin_model.R")
@@ -1053,7 +1006,7 @@ SBML_to_odin <- function(model, path_to_output){
 #' @param path_to_output A string (Path to the output file).
 #'
 #' @importFrom libSBML readSBMLFromFile SBMLDocument_getModel
-#' @return
+#' @return no return
 #' @export
 #'
 #' @examples
@@ -1072,10 +1025,11 @@ importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
 #' @importFrom libSBML readSBMLFromString SBMLDocument_getModel
 #' @importFrom httr GET
 #' @importFrom jsonlite fromJSON
-#' @return
+#' @return no return
 #' @export
 #'
 #' @examples
+#' importSBMLfromBioModels(biomodels_id, output_directory)
 importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   ### still need to add try.. catch stuff and error messages. If the model does not exist etc.
   #res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))

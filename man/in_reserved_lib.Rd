@@ -17,3 +17,6 @@ A string.
 \description{
 Title
 }
+\examples{
+in_reserved_lib("a", c("a"="a1", "b"="b1"))
+}

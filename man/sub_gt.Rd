@@ -15,3 +15,6 @@ file content A string.
 \description{
 Title
 }
+\examples{
+sub_gt("if(gt(a,2))")
+}
