@@ -32,7 +32,7 @@
 getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict, reserved_names_lib){
   rule_type <- libSBML::Rule_getType(libSBML::Model_getRule(m,i-1))
   if(rule_type == "RULE_TYPE_SCALAR"){
-    param_id <- SBMLtoOdin::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
+    param_id <- SBMLtoOdin:::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
     #print(paste(c(param_id, libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "))
     file_content <- paste(file_content, paste(c(param_id, libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
     var_params_dict_used[param_id] <- TRUE
@@ -40,7 +40,7 @@ getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict, r
   else if(rule_type == "RULE_TYPE_RATE"){
     if(libSBML::Rule_isParameter(libSBML::Model_getRule(m,i-1))){
       # this is a rule for a parameter, not for a species
-      param_id <- SBMLtoOdin::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
+      param_id <- SBMLtoOdin:::in_reserved_lib(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), reserved_names_lib)
       file_content <- paste(file_content, paste(c(paste("deriv(",param_id,")",sep = ""), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
       file_content <- paste(file_content, "\n", "initial(", param_id, ") <- ", var_params_dict[param_id], sep = "")
       #file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), "1 + 0.5 * t"), collapse = " <- "), sep = "\n")
@@ -76,7 +76,7 @@ getRule <- function(file_content, m, i, var_params_dict_used, var_params_dict, r
 getSpeciesRule <- function(m, i, species_dic, func_def_dict){
   rhs <- libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))
   #if(grepl("leq",rhs)){
-  #  rhs <- SBMLtoOdin::sub_leq(rhs)
+  #  rhs <- SBMLtoOdin:::sub_leq(rhs)
   #  print(rhs)
   #}
   #rhs <- gsub("time", "t", rhs)
@@ -85,25 +85,25 @@ getSpeciesRule <- function(m, i, species_dic, func_def_dict){
     # if this is a custom function, I need to first determine the real rhs (from the function call)
     for (cust_func in func_def_dict) {
       if(grepl(cust_func, rhs)){
-        rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, cust_func)
+        rhs <- SBMLtoOdin:::getFunctionOutputForRules(m, rhs, cust_func)
       }
     }
     #if(is.element(strsplit(rhs,"\\(")[[1]][1],func_def_dict)){
-    #  rhs <- SBMLtoOdin::getFunctionOutputForRules(m, rhs, strsplit(rhs,"\\(")[[1]][1])
+    #  rhs <- SBMLtoOdin:::getFunctionOutputForRules(m, rhs, strsplit(rhs,"\\(")[[1]][1])
 
       if(grepl("piecewise",rhs)){
-        rhs <- SBMLtoOdin::translate_piecewise(rhs)
+        rhs <- SBMLtoOdin:::translate_piecewise(rhs)
       }
       if(grepl("pow\\(",rhs)){
-        rhs <- SBMLtoOdin::translate_pow(rhs)
+        rhs <- SBMLtoOdin:::translate_pow(rhs)
       }
       if(grepl("root\\(",rhs)){
-        rhs <- SBMLtoOdin::translate_root(rhs)
+        rhs <- SBMLtoOdin:::translate_root(rhs)
       }
 
     #else{
     #  if(grepl("piecewise",rhs)){
-    #    rhs <- SBMLtoOdin::translate_piecewise(rhs)
+    #    rhs <- SBMLtoOdin:::translate_piecewise(rhs)
     #  }
     #  if(grepl("pow\\(",rhs)){
     #    rhs <- translate_pow(rhs)
@@ -252,7 +252,7 @@ AddToParamLib <- function(r, local_param_lib,reserved_lib){
     if(libSBML::KineticLaw_getNumParameters(k) > 0){
       for (i in seq_len(libSBML::KineticLaw_getNumParameters(k))) {
         id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(k,i-1))
-        id <- SBMLtoOdin::in_reserved_lib(id, reserved_lib)
+        id <- SBMLtoOdin:::in_reserved_lib(id, reserved_lib)
         value <- libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(k,i-1))
         if(is.element(id, names(local_param_lib))){
           if(value != local_param_lib[id]){
@@ -289,7 +289,7 @@ getFunctionParams <- function(file_content, r, param_lib, reserved_lib){
     if(libSBML::KineticLaw_getNumParameters(k) > 0){
       for (i in seq_len(libSBML::KineticLaw_getNumParameters(k))) {
         id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(k,i-1))
-        id <- SBMLtoOdin::in_reserved_lib(id, reserved_lib)
+        id <- SBMLtoOdin:::in_reserved_lib(id, reserved_lib)
         value <- libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(k,i-1))
         if(!is.element(id, names(param_lib))){
           param_def <- paste(id, " <- ", value, sep = "")
@@ -394,26 +394,26 @@ translate_piecewise <- function(file_content){
   }
   new_piece_expr <- ""
     while(grepl("geq",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_geq(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_geq(piece_expr[2])
     }
     while(grepl("leq",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_leq(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_leq(piece_expr[2])
     }
     while(grepl("lt",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_lt(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_lt(piece_expr[2])
     }
     while(grepl("gt",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_gt(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_gt(piece_expr[2])
     }
     while(grepl("neq",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_neq_for_comp(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_neq_for_comp(piece_expr[2])
     }
   #print(piece_expr[2])
     while(grepl("eq",piece_expr[2])){
-      piece_expr[2] <- SBMLtoOdin::sub_eq_for_comp(piece_expr[2])
+      piece_expr[2] <- SBMLtoOdin:::sub_eq_for_comp(piece_expr[2])
     }
     while(grepl("and",piece_expr[2])){
-     piece_expr[2] <- SBMLtoOdin::sub_and(piece_expr[2])
+     piece_expr[2] <- SBMLtoOdin:::sub_and(piece_expr[2])
    }
     # to do: add neq
     #print(piece_expr[2])
@@ -676,10 +676,10 @@ SBML_to_odin <- function(model, path_to_output){
   # devtools::test()
 
   # does not work anymore:
-  # SBMLtoOdin::SBML_to_odin("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
+  # SBMLtoOdin:::SBML_to_odin("../testmodel_00001-sbml-l3v1.xml","../testmodel_output.R")
   # instead call either the importSBMLfromFile function or the importSBMLfromBioModels function
 
-  #model = SBMLtoOdin::importSBML(path_to_input)
+  #model = SBMLtoOdin:::importSBML(path_to_input)
   reserved_names_lib <- c()
   reserved_names_lib[c("i", "j", "k", "l", "i5", "i6", "i7", "i8", "t", "auto", "break", "case", "char", "const", "continue", "default",
                        "do", "double", "enum", "extern", "float", "for", "goto",
@@ -701,7 +701,7 @@ SBML_to_odin <- function(model, path_to_output){
   for (i in seq_len(libSBML::Model_getNumParameters(model))) {
     if(libSBML::Parameter_getConstant(libSBML::Model_getParameter(model, i-1))){
       param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
-      param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
+      param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
       if(grepl("_init",param_id)){
         param_id <- paste(param_id, "1",sep = "")
       }
@@ -711,7 +711,7 @@ SBML_to_odin <- function(model, path_to_output){
       param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
       #print("down")
       #print(param_id)
-      param_id <- SBMLtoOdin::in_reserved_lib(param_id, reserved_names_lib)
+      param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
       #print(param_id)
       param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
       if(grepl("_init",param_id)){
@@ -779,7 +779,7 @@ SBML_to_odin <- function(model, path_to_output){
     if(!found_initial){
       print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
     }
-    id_tr <- SBMLtoOdin::in_reserved_lib(id, reserved_names_lib)
+    id_tr <- SBMLtoOdin:::in_reserved_lib(id, reserved_names_lib)
     file_str <- paste(file_str, paste("initial(",id_tr,") <- ", id_tr, "_init",sep = ""), paste(id_tr, "_init <- ", conc, sep = ""), sep = "\n")
   }
   # build library of function definitions
@@ -792,10 +792,10 @@ SBML_to_odin <- function(model, path_to_output){
   print("Fetching Rules")
   for (i in seq_len(libSBML::Model_getNumRules(model))) {
     if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
-      dic_react <- SBMLtoOdin::getSpeciesRule(model, i, dic_react, func_def_dict)
+      dic_react <- SBMLtoOdin:::getSpeciesRule(model, i, dic_react, func_def_dict)
     }
     else{
-      return_list <- SBMLtoOdin::getRule(file_str, model, i, var_params_dict_used, var_params_dict, reserved_names_lib)
+      return_list <- SBMLtoOdin:::getRule(file_str, model, i, var_params_dict_used, var_params_dict, reserved_names_lib)
       file_str <- return_list[[1]]
       var_params_dict_used <- return_list[[2]]
       # this does not seem right!
@@ -815,7 +815,7 @@ SBML_to_odin <- function(model, path_to_output){
       #print(id_prod)
       #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
-      #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+      #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
 
     }
     for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
@@ -826,18 +826,18 @@ SBML_to_odin <- function(model, path_to_output){
       #print(id_reac)
       #print(dic_react[id_reac])
       # former version. I will have to test what happens when reaction does not behave according to kinetic law
-      #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+      #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
 
     }
     # get Parameters for reaction
-    file_str <- SBMLtoOdin::getFunctionParams(file_str, libSBML::Model_getReaction(model, i-1),param_lib,reserved_names_lib)
-    param_lib <- SBMLtoOdin::AddToParamLib(libSBML::Model_getReaction(model, i-1), param_lib,reserved_names_lib)
+    file_str <- SBMLtoOdin:::getFunctionParams(file_str, libSBML::Model_getReaction(model, i-1),param_lib,reserved_names_lib)
+    param_lib <- SBMLtoOdin:::AddToParamLib(libSBML::Model_getReaction(model, i-1), param_lib,reserved_names_lib)
   }
   ### special case: there are no reactions in the model.
   # or maybe there are reactions that are defined through rules rather than reactions.
   # add reactions, one per product
   for (i in names(dic_react)){
-    i_tr <- SBMLtoOdin::in_reserved_lib(i, reserved_names_lib)
+    i_tr <- SBMLtoOdin:::in_reserved_lib(i, reserved_names_lib)
     #print(i_tr)
     #print(dic_react[i])
     file_str <- paste(file_str, paste("deriv(",i_tr,")", " <- ", paste(dic_react[i], " ", sep = ""), sep = ""), sep = "\n")
@@ -868,16 +868,16 @@ SBML_to_odin <- function(model, path_to_output){
       event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
       #print(event_trigger)
       if(grepl("gt",event_trigger)){
-        event_trigger <- SBMLtoOdin::sub_gt(event_trigger)
+        event_trigger <- SBMLtoOdin:::sub_gt(event_trigger)
       }
       else if(grepl("geq",event_trigger)){
-        event_trigger <- SBMLtoOdin::sub_geq(event_trigger)
+        event_trigger <- SBMLtoOdin:::sub_geq(event_trigger)
       }
       #event_trigger <- gsub("time", "t", event_trigger)
       for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
         event_assign <- libSBML::Event_getEventAssignment(event, j-1)
         event_var <- libSBML::EventAssignment_getVariable(event_assign)
-        event_var <- SBMLtoOdin::in_reserved_lib(event_var, reserved_names_lib)
+        event_var <- SBMLtoOdin:::in_reserved_lib(event_var, reserved_names_lib)
         event_val <- libSBML::formulaToString(libSBML::EventAssignment_getMath(event_assign))
         non_event_val <- var_params_dict[event_var]
         var_params_dict_used[event_var] <- TRUE
@@ -904,28 +904,28 @@ SBML_to_odin <- function(model, path_to_output){
   # Call function that replaces piecewise() by if statement
   #print(file_str)
   if(grepl("piecewise",file_str)){
-    file_str <- SBMLtoOdin::translate_piecewise(file_str)
+    file_str <- SBMLtoOdin:::translate_piecewise(file_str)
   }
   #print(file_str)
   # substitute factorial by gamma function
   if(grepl("factorial",file_str)){
-    file_str <- SBMLtoOdin::sub_factorial(file_str)
+    file_str <- SBMLtoOdin:::sub_factorial(file_str)
   }
   # substitute ceil by ceiling
   if(grepl("ceil",file_str)){
-    file_str <- SBMLtoOdin::sub_ceil(file_str)
+    file_str <- SBMLtoOdin:::sub_ceil(file_str)
   }
   # substitute leq by <=
   if(grepl("leq",file_str)){
-    file_str <- SBMLtoOdin::sub_leq(file_str)
+    file_str <- SBMLtoOdin:::sub_leq(file_str)
   }
   # substitute lt by <
   if(grepl("lt\\(",file_str)){
-    file_str <- SBMLtoOdin::sub_lt(file_str)
+    file_str <- SBMLtoOdin:::sub_lt(file_str)
   }
   # substitute gt by >
   if(grepl("gt\\(",file_str)){
-    file_str <- SBMLtoOdin::sub_gt(file_str)
+    file_str <- SBMLtoOdin:::sub_gt(file_str)
   }
   # substitute custom functions
   #print(file_str)
@@ -940,7 +940,7 @@ SBML_to_odin <- function(model, path_to_output){
         #print("found")
         #print(strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i])
         #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
-        replaced_func <- SBMLtoOdin::getFunctionOutputForRules(model, paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), cust_func)
+        replaced_func <- SBMLtoOdin:::getFunctionOutputForRules(model, paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""), cust_func)
         #print(replaced_func)
         #print("to be replaced")
         #print(paste(cust_func, regmatches(paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), gregexpr("(\\(([^()]|(?1))*\\))", paste("(",strsplit(file_str,paste(cust_func, "(", sep = ""), fixed = TRUE)[[1]][i], sep = ""), perl=TRUE))[[1]][1], sep = ""))
@@ -983,7 +983,7 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- paste("pi <- 3.141593", file_str, sep = "\n")
   }
   if(grepl("piecewise",file_str)){
-    file_str <- SBMLtoOdin::translate_piecewise(file_str)
+    file_str <- SBMLtoOdin:::translate_piecewise(file_str)
   }
   for (reserved_param in names(reserved_names_lib)) {
     #print(reserved_param)
@@ -1006,6 +1006,7 @@ SBML_to_odin <- function(model, path_to_output){
 #' @param path_to_output A string (Path to the output file).
 #'
 #' @importFrom libSBML readSBMLFromFile SBMLDocument_getModel
+#' @importFrom SBMLtoOdin SBML_to_odin
 #' @return no return
 #' @export
 #'
@@ -1014,7 +1015,7 @@ SBML_to_odin <- function(model, path_to_output){
 importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
   doc = libSBML::readSBMLFromFile(path_to_input)
   model = libSBML::SBMLDocument_getModel(doc)
-  SBMLtoOdin::SBML_to_odin(model,path_to_output)
+  SBMLtoOdin:::SBML_to_odin(model,path_to_output)
 }
 
 #' Title
@@ -1025,6 +1026,7 @@ importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
 #' @importFrom libSBML readSBMLFromString SBMLDocument_getModel
 #' @importFrom httr GET
 #' @importFrom jsonlite fromJSON
+#' @importFrom SBMLtoOdin SBML_to_odin
 #' @return no return
 #' @export
 #'
@@ -1048,7 +1050,7 @@ importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   #doc = libSBML::readSBMLFromString(data_2)
   #doc = libSBML::readSBMLFromString(res2$content)
   #model = libSBML::SBMLDocument_getModel(doc)
-  #SBMLtoOdin::SBML_to_odin(model,path_to_output)
+  #SBMLtoOdin:::SBML_to_odin(model,path_to_output)
 
   res1 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/files/", model_id, sep = ""))
   data = jsonlite::fromJSON(rawToChar(res1$content))
@@ -1064,5 +1066,5 @@ importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
   doc = libSBML::readSBMLFromString(rawToChar(res2$content))
   model = libSBML::SBMLDocument_getModel(doc)
-  SBMLtoOdin::SBML_to_odin(model,path_to_output)
+  SBMLtoOdin:::SBML_to_odin(model,path_to_output)
 }
