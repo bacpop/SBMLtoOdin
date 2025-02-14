@@ -27,9 +27,15 @@ legend("topright", lwd = 1, col = cols, legend = c("S", "I", "R"), bty = "n")
 ### example 2
 # Model for Intracellular Signalling
 importSBMLfromBioModels("MODEL2307110001","../MothesModel.R") # imports model using SBMLtoOdin package
+# Error in parse(file = x, keep.source = TRUE) :
+#../MothesModel.R:40:11: unexpected input
+#39: deriv(IKK_active) <- 0 + 1 * k14 / (k14 + A20) - k15 * IKK_active + stimulus * k13 * exp(-A20)
+#40:  default1 _
+
+# quick fix: remove white space before _
 model_generator_mothes <- odin::odin("../MothesModel.R",verbose = FALSE) # creates model
 MothesModel <- model_generator_mothes$new() #creates object, with parameters if needed
-MothesModel_res <- MothesModel$run(0:400) # runs model forward in time, for specified time
+MothesModel_res <- MothesModel$run(0:4000) # runs model forward in time, for specified time
 
 
 cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -37,6 +43,9 @@ matplot(MothesModel_res[, 1], MothesModel_res[, -1], xlab = "Time", ylab = "Numb
         type = "l", col = cols, lty = 1, ylim = c(0,40))
 legend("topright", lwd = 1, col = cols, legend = colnames(MothesModel_res)[-1], bty = "n")
 
+# testing whether increasing time is a problem in odin / R
+# no.
+# It must be a problem in js
 
 ### more examples
 example_model_ids <- c("BIOMD0000000002", "BIOMD0000000003", "BIOMD0000000004","BIOMD0000000005","BIOMD0000000006","BIOMD0000000008","BIOMD0000000011","BIOMD0000000012","BIOMD0000000014","BIOMD0000000017")
