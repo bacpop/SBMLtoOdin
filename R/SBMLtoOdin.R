@@ -691,148 +691,235 @@ SBML_to_odin <- function(model, path_to_output){
                                                                                "short1", "signed1", "sizeof1", "static1", "struct1", "switch1", "typedef1",
                                                                                "union1", "unsigned1", "void1", "volatile1", "while1")
 
+
+
   file_str <-""
 
   # add parameter values
   # dict for non-constant params
-  var_params_dict <- c()
-  var_params_dict_used <- c() # stores whether value has been used somewhere (usually events or rules), otherwise prints it out in the end
-  print("Fetching Parameter Values")
-  for (i in seq_len(libSBML::Model_getNumParameters(model))) {
-    if(libSBML::Parameter_getConstant(libSBML::Model_getParameter(model, i-1))){
-      param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
-      param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
-      if(grepl("_init",param_id)){
-        param_id <- paste(param_id, "1",sep = "")
-      }
-      file_str <- paste(file_str, paste(param_id, " <- user(", libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1)) , ")", sep = ""), sep = "\n")
-    }
-    else{
-      param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
-      #print("down")
-      #print(param_id)
-      param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
-      #print(param_id)
-      param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
-      if(grepl("_init",param_id)){
-        param_id <- paste(param_id, "1",sep = "")
-      }
-      var_params_dict[param_id] <- param_val
-      var_params_dict_used[param_id] <- FALSE
-    }
-  }
+  # var_params_dict <- c()
+  # var_params_dict_used <- c() # stores whether value has been used somewhere (usually events or rules), otherwise prints it out in the end
+  # print("Fetching Parameter Values")
+  # for (i in seq_len(libSBML::Model_getNumParameters(model))) {
+  #   if(libSBML::Parameter_getConstant(libSBML::Model_getParameter(model, i-1))){
+  #     param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
+  #     param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
+  #     if(grepl("_init",param_id)){
+  #       param_id <- paste(param_id, "1",sep = "")
+  #     }
+  #     file_str <- paste(file_str, paste(param_id, " <- user(", libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1)) , ")", sep = ""), sep = "\n")
+  #   }
+  #   else{
+  #     param_id <- libSBML::Parameter_getId(libSBML::Model_getParameter(model, i-1))
+  #     #print("down")
+  #     #print(param_id)
+  #     param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
+  #     #print(param_id)
+  #     param_val <- libSBML::Parameter_getValue(libSBML::Model_getParameter(model, i-1))
+  #     if(grepl("_init",param_id)){
+  #       param_id <- paste(param_id, "1",sep = "")
+  #     }
+  #     var_params_dict[param_id] <- param_val
+  #     var_params_dict_used[param_id] <- FALSE
+  #   }
+  # }
 
   dic_react <- c()
   bad_names <- c()
   boundCond <- c()
   # add initial values for species
   print("Fetching Species")
+  species_list <- list()
+  boundary_cond_list <- list()
   for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
-    species = libSBML::Model_getSpecies(model, i-1)
-    id = libSBML::Species_getId(species)
-    boundCond[id] = libSBML::Species_getBoundaryCondition(species)
-    #print("species id")
-    #print(id)
-    if(grepl("^\\_[0-9+]",id, perl = TRUE)){
-      bad_names[id] <- paste("p", id, sep = "")
-    }
-    else if(grepl("^[0-9+]",id, perl = TRUE)){
-      bad_names[id] <- paste("p", id, sep = "")
-    }
-    dic_react[id] <- 0
-    found_initial <- FALSE
-    conc <- ""
+    species <- libSBML::Model_getSpecies(model, i-1)
+    # find initial concentration
+    spec_conc <- NA
     if(!is.na(libSBML::Species_getInitialAmount(species))){
-      conc = libSBML::Species_getInitialAmount(species)
-      conc = paste("user(",conc, ")",sep = "")
-      found_initial <- TRUE
+      spec_conc <- libSBML::Species_getInitialAmount(species)
     }
     else if(!is.na(libSBML::Species_getInitialConcentration(species))){
-      conc = libSBML::Species_getInitialConcentration(species)
-      conc = paste("user(",conc, ")",sep = "")
-      found_initial <- TRUE
+      spec_conc = libSBML::Species_getInitialConcentration(species)
     }
-    if(libSBML::Model_getNumRules(model)>0){
-      for (j in 1:libSBML::Model_getNumRules(model)) {
-        if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
-          if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
-            conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
-            if(grepl("_init",conc)){
-              conc <- paste(conc, "1",sep="")
-            }
-            found_initial <- TRUE
-          }
-        }
-      }
-    }
-    if(libSBML::Model_getNumInitialAssignments(model)>0){
-      for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
-        if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id){
-          conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
-          if(grepl("_init",conc)){
-            conc <- paste(conc, "1",sep="")
-          }
-          found_initial <- TRUE
-        }
-      }
-    }
-    if(!found_initial){
-      print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
-    }
-    id_tr <- SBMLtoOdin:::in_reserved_lib(id, reserved_names_lib)
-    file_str <- paste(file_str, paste("initial(",id_tr,") <- ", id_tr, "_init",sep = ""), paste(id_tr, "_init <- ", conc, sep = ""), sep = "\n")
+    species_list[[libSBML::Species_getId(species)]] <- list(
+      name = libSBML::Species_getId(species),
+      compartment = libSBML::Species_getCompartment(species),
+      initialAmount = spec_conc
+    )
+    boundary_cond_list[[libSBML::Species_getId(species)]] <- libSBML::Species_getBoundaryCondition(species)
   }
+
+  # for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
+  #   species = libSBML::Model_getSpecies(model, i-1)
+  #   id = libSBML::Species_getId(species)
+  #   boundCond[id] = libSBML::Species_getBoundaryCondition(species)
+  #   #print("species id")
+  #   #print(id)
+  #   if(grepl("^\\_[0-9+]",id, perl = TRUE)){
+  #     bad_names[id] <- paste("p", id, sep = "")
+  #   }
+  #   else if(grepl("^[0-9+]",id, perl = TRUE)){
+  #     bad_names[id] <- paste("p", id, sep = "")
+  #   }
+  #   dic_react[id] <- 0
+  #   found_initial <- FALSE
+  #   conc <- ""
+  #   if(!is.na(libSBML::Species_getInitialAmount(species))){
+  #     conc = libSBML::Species_getInitialAmount(species)
+  #     conc = paste("user(",conc, ")",sep = "")
+  #     found_initial <- TRUE
+  #   }
+  #   else if(!is.na(libSBML::Species_getInitialConcentration(species))){
+  #     conc = libSBML::Species_getInitialConcentration(species)
+  #     conc = paste("user(",conc, ")",sep = "")
+  #     found_initial <- TRUE
+  #   }
+  #   if(libSBML::Model_getNumRules(model)>0){
+  #     for (j in 1:libSBML::Model_getNumRules(model)) {
+  #       if(libSBML::Rule_getVariable(libSBML::Model_getRule(model,j-1)) == id){
+  #         if(libSBML::Rule_getType(libSBML::Model_getRule(model,j-1)) == "RULE_TYPE_SCALAR"){
+  #           conc = libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(model,j-1)))
+  #           if(grepl("_init",conc)){
+  #             conc <- paste(conc, "1",sep="")
+  #           }
+  #           found_initial <- TRUE
+  #         }
+  #       }
+  #     }
+  #   }
+  #   if(libSBML::Model_getNumInitialAssignments(model)>0){
+  #     for (j in 1:libSBML::Model_getNumInitialAssignments(model)) {
+  #       if(libSBML::InitialAssignment_getSymbol(libSBML::Model_getInitialAssignment(model,j-1)) == id){
+  #         conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(libSBML::Model_getInitialAssignment(model,j-1)))
+  #         if(grepl("_init",conc)){
+  #           conc <- paste(conc, "1",sep="")
+  #         }
+  #         found_initial <- TRUE
+  #       }
+  #     }
+  #   }
+  #   if(!found_initial){
+  #     print(paste("Warning: Initial amount and concentration not defined for ", as.character(id)))
+  #   }
+  #   id_tr <- SBMLtoOdin:::in_reserved_lib(id, reserved_names_lib)
+  #   file_str <- paste(file_str, paste("initial(",id_tr,") <- ", id_tr, "_init",sep = ""), paste(id_tr, "_init <- ", conc, sep = ""), sep = "\n")
+  # }
+
   # build library of function definitions
   func_def_dict <- c()
   for (i in seq_len(libSBML::Model_getNumFunctionDefinitions(model))) {
     func_def_dict[i] <- libSBML::FunctionDefinition_getId(libSBML::Model_getFunctionDefinition(model,i-1))
   }
   #print(var_params_dict_used)
-  # add rules to file
+  # save rules
   print("Fetching Rules")
-  for (i in seq_len(libSBML::Model_getNumRules(model))) {
-    if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
-      dic_react <- SBMLtoOdin:::getSpeciesRule(model, i, dic_react, func_def_dict)
+  rule_list <- list()
+  print(libSBML::Model_getNumRules(model))
+  for (i in 1:(libSBML::Model_getNumRules(model))) {
+    rule <- libSBML::Model_getRule(model, i-1)
+    if (libSBML::Rule_isRate(rule)) {
+      variable <- Rule_getVariable(rule)
+      math <- formulaToString(Rule_getMath(rule))
+      rule_list[[variable]] <- math
     }
-    else{
-      return_list <- SBMLtoOdin:::getRule(file_str, model, i, var_params_dict_used, var_params_dict, reserved_names_lib)
-      file_str <- return_list[[1]]
-      var_params_dict_used <- return_list[[2]]
-      # this does not seem right!
+    else if(libSBML::Rule_isAssignment(rule)){
+      variable <- Rule_getVariable(rule)
+      math <- formulaToString(Rule_getMath(rule))
+      # If species has no initial amount but has an assignment rule, use the rule for initialization
+      if (variable %in% names(species_list) && (is.null(species_list[[variable]]$initialAmount) || is.na(species_list[[variable]]$initialAmount))) {
+        species_list[[variable]]$initialAmount <- math
+      }
     }
   }
+  # for (i in seq_len(libSBML::Model_getNumRules(model))) {
+  #   if(is.element(libSBML::Rule_getId(libSBML::Model_getRule(model,i-1)),names(dic_react))){
+  #     dic_react <- SBMLtoOdin:::getSpeciesRule(model, i, dic_react, func_def_dict)
+  #   }
+  #   else{
+  #     return_list <- SBMLtoOdin:::getRule(file_str, model, i, var_params_dict_used, var_params_dict, reserved_names_lib)
+  #     file_str <- return_list[[1]]
+  #     var_params_dict_used <- return_list[[2]]
+  #     # this does not seem right!
+  #   }
+  # }
   #print(var_params_dict_used)
+
   # collect reactions
   print("Fetching Reactions")
-  param_lib <- c()
-  for (i in seq_len(libSBML::Model_getNumReactions(model))){
-    for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
-      id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
-      #print(libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)))
-      if(!boundCond[id_prod]){
-        dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
-      }
-      #print(id_prod)
-      #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
-      # former version. I will have to test what happens when reaction does not behave according to kinetic law
-      #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+  reaction_list <- list()
+  for (i in seq_len(libSBML::Model_getNumReactions(model))) {
+    reaction <- libSBML::Model_getReaction(model, i-1)
 
+    # reactants
+    reactant_list <- list()
+    for (j in seq_len(libSBML::Reaction_getNumReactants(reaction, i-1))) {
+      reactant <- libSBML::Reaction_getReactant(reaction, j-1)
+      reactant_list[[libSBML::Species_getSpeciesType(reactant)]] <- libSBML::SpeciesReference_getStoichiometry(reactant)
     }
-    for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
-      id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
-      if(!boundCond[id_reac]){
-      dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
-      }
-      #print(id_reac)
-      #print(dic_react[id_reac])
-      # former version. I will have to test what happens when reaction does not behave according to kinetic law
-      #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+    # products
+    product_list <- list()
+    for (k in seq_len(libSBML::Reaction_getNumProducts(reaction, i-1))) {
+      product <- libSBML::Reaction_getProduct(reaction, k-1)
+      product_list[[libSBML::Species_getSpeciesType(product)]] <- libSBML::SpeciesReference_getStoichiometry(product)
+    }
 
+    # extract local parameters
+    local_parameter_list <- list()
+    law <- libSBML::Reaction_getKineticLaw(reaction)
+    if (!is.null(law)) {
+      for (j in 1:(libSBML::KineticLaw_getNumLocalParameters(law))) {
+        local_param <- libSBML::KineticLaw_getLocalParameter(law, j-1)
+        #print(libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(law,j-1)))
+        local_parameter_list[[libSBML::Parameter_getId(local_param)]] <- libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(law,j-1))
+      }
     }
-    # get Parameters for reaction
-    file_str <- SBMLtoOdin:::getFunctionParams(file_str, libSBML::Model_getReaction(model, i-1),param_lib,reserved_names_lib)
-    param_lib <- SBMLtoOdin:::AddToParamLib(libSBML::Model_getReaction(model, i-1), param_lib,reserved_names_lib)
+
+    # extract kinetic law
+    law <- libSBML::Reaction_getKineticLaw(reaction)
+    math <- if (!is.null(law)) {
+      formula <- formulaToString(KineticLaw_getMath(law))
+      gsub("\n", "", formula)
+    } else {
+      "0"
+    }
+
+    reaction_list[[libSBML::Reaction_getId(reaction)]] <- list(
+      name = libSBML::Reaction_getName(reaction),
+      reactants = reactant_list,
+      products = product_list,
+      rate = math,
+      local_parameters = local_parameter_list
+    )
   }
+  # param_lib <- c()
+  # for (i in seq_len(libSBML::Model_getNumReactions(model))){
+  #   for (j in seq_len(libSBML::Reaction_getNumProducts(libSBML::Model_getReaction(model, i-1)))) {
+  #     id_prod = libSBML::Species_getSpeciesType(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1))
+  #     #print(libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)))
+  #     if(!boundCond[id_prod]){
+  #       dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getProduct(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+  #     }
+  #     #print(id_prod)
+  #     #print(libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))))
+  #     # former version. I will have to test what happens when reaction does not behave according to kinetic law
+  #     #dic_react[id_prod] <- paste(dic_react[id_prod],  " + ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+  #
+  #   }
+  #   for (j in seq_len(libSBML::Reaction_getNumReactants(libSBML::Model_getReaction(model, i-1)))) {
+  #     id_reac = libSBML::Species_getSpeciesType(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1))
+  #     if(!boundCond[id_reac]){
+  #     dic_react[id_reac] <- paste(dic_react[id_reac], " - ", libSBML::SpeciesReference_getStoichiometry(libSBML::Reaction_getReactant(libSBML::Model_getReaction(model, i-1),j-1)), " * ", libSBML::KineticLaw_getFormula(libSBML::Reaction_getKineticLaw(libSBML::Model_getReaction(model, i-1))), sep = "")
+  #     }
+  #     #print(id_reac)
+  #     #print(dic_react[id_reac])
+  #     # former version. I will have to test what happens when reaction does not behave according to kinetic law
+  #     #dic_react[id_reac] <- paste(dic_react[id_reac], " - ", SBMLtoOdin:::getFunctionOutput(model, i, libSBML::Model_getReaction(model, i-1)), sep = "")
+  #
+  #   }
+  #   # get Parameters for reaction
+  #   file_str <- SBMLtoOdin:::getFunctionParams(file_str, libSBML::Model_getReaction(model, i-1),param_lib,reserved_names_lib)
+  #   param_lib <- SBMLtoOdin:::AddToParamLib(libSBML::Model_getReaction(model, i-1), param_lib,reserved_names_lib)
+  # }
   ### special case: there are no reactions in the model.
   # or maybe there are reactions that are defined through rules rather than reactions.
   # add reactions, one per product
@@ -842,64 +929,148 @@ SBML_to_odin <- function(model, path_to_output){
     #print(dic_react[i])
     file_str <- paste(file_str, paste("deriv(",i_tr,")", " <- ", paste(dic_react[i], " ", sep = ""), sep = ""), sep = "\n")
   }
-  for (param_name in names(param_lib)) {
-    if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
-      bad_names[param_name] <- paste("p", param_name, sep = "")
-    }
-    else if(grepl("^[0-9+]",param_name, perl = TRUE)){
-      bad_names[param_name] <- paste("p", param_name, sep = "")
+
+  # commenting this out for now, but I will need some version of this
+  # for (param_name in names(param_lib)) {
+  #   if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
+  #     bad_names[param_name] <- paste("p", param_name, sep = "")
+  #   }
+  #   else if(grepl("^[0-9+]",param_name, perl = TRUE)){
+  #     bad_names[param_name] <- paste("p", param_name, sep = "")
+  #   }
+  # }
+
+  # parameters
+  parameter_list <- list()
+  if(libSBML::Model_getNumParameters(model) > 0){
+    for (i in 1:(libSBML::Model_getNumParameters(model))) {
+      parameter <- libSBML::Model_getParameter(model, i-1)
+      parameter_list[[libSBML::Parameter_getId(parameter)]] <- libSBML::Parameter_getValue(parameter)
     }
   }
+
+  ### this one does not catch nuances like in all_biomod_ids[1]
+  # that some initial parameters depend on other parameters
+  # something like (if t >0 ) 1 else 2
+  # please make sure to add that later
+
   #print(file_str)
+
+  # add events
+  ### remove events for now but need to bring them back!!!
+
+  # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
+  #print(libSBML::Model_getNumEvents(model))
+  # if(libSBML::Model_getNumEvents(model) > 0){
+  #   for (i in seq_len(libSBML::Model_getNumEvents(model))) {
+  #     event <- libSBML::Model_getEvent(model,i-1)
+  #     event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
+  #     #print(event_trigger)
+  #     if(grepl("gt",event_trigger)){
+  #       event_trigger <- SBMLtoOdin:::sub_gt(event_trigger)
+  #     }
+  #     else if(grepl("geq",event_trigger)){
+  #       event_trigger <- SBMLtoOdin:::sub_geq(event_trigger)
+  #     }
+  #     #event_trigger <- gsub("time", "t", event_trigger)
+  #     for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
+  #       event_assign <- libSBML::Event_getEventAssignment(event, j-1)
+  #       event_var <- libSBML::EventAssignment_getVariable(event_assign)
+  #       event_var <- SBMLtoOdin:::in_reserved_lib(event_var, reserved_names_lib)
+  #       event_val <- libSBML::formulaToString(libSBML::EventAssignment_getMath(event_assign))
+  #       non_event_val <- var_params_dict[event_var]
+  #       var_params_dict_used[event_var] <- TRUE
+  #       var_formula <- paste(event_var, " <- if(", event_trigger, ") ", event_val, " else ",  non_event_val, sep = "")
+  #       file_str <- paste(file_str, var_formula, sep = "\n")
+  #     }
+  #   }
+  #   #libSBML::Model_getEvent(model,0)
+  #   #libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(libSBML::Model_getEvent(model,0))))
+  #
+  #   #libSBML::Event_getNumEventAssignments(libSBML::Model_getEvent(model,0))
+  #   #libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)
+  #   #libSBML::EventAssignment_getVariable(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0))
+  #   #libSBML::formulaToString(libSBML::EventAssignment_getMath(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)))
+  # }
+  #print(file_str)
+  # add compartments
+  #print(file_str)
+  print("Fetching Compartments")
+  compartment_list <- list()
+  for (i in seq_len(libSBML::Model_getNumCompartments(model))) {
+    comp = (libSBML::Model_getCompartment(model,i-1))
+    compartment_list[[libSBML::Compartment_getId(comp)]] <- libSBML::Compartment_getSize(comp)
+  #  file_str <- paste(file_str, paste(libSBML::Compartment_getId(comp), " <- ", libSBML::Compartment_getSize(comp), sep = ""), sep = "\n")
+  }
+
+  ### add info from dictionaries to file string
+  # Initial conditions
+  for (id in names(species_list)) {
+    init_val <- species_list[[id]]$initialAmount
+    file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
+    file_str <- paste(file_str, paste0(id, "_init <- user(", init_val, ")"), sep = "\n")
+  }
+
+  # Differential equations (reactions)
+  deriv_equations <- list()
+  for (id in names(species_list)) {
+    if (!boundary_cond_list[[id]]) {
+      deriv_equations[[id]] <- "0"
+    }
+  }
+
+  for (id in names(species_list)) {
+    deriv_equations[[id]] <- "0"
+  }
+
+  for (reaction in reaction_list) {
+    rate <- reaction$rate
+    for (reactant in names(reaction$reactants)) {
+      stoich <- reaction$reactants[[reactant]]
+      if (!boundary_cond_list[[reactant]]) {
+        deriv_equations[[reactant]] <- paste0(deriv_equations[[reactant]], " - ", stoich, " * ", rate)
+      }
+    }
+    for (product in names(reaction$products)) {
+      stoich <- reaction$products[[product]]
+      if (!boundary_cond_list[[product]]) {
+      deriv_equations[[product]] <- paste0(deriv_equations[[product]], " + ", stoich, " * ", rate)
+      }
+    }
+  }
+  # add rate rules to output
+  for (variable in names(rule_list)) {
+    deriv_equations[[variable]] <- rule_list[[variable]]
+  }
+
+  for (id in names(deriv_equations)) {
+    file_str <- paste(file_str, paste0("deriv(", id, ") <- ", deriv_equations[[id]]), sep = "\n")
+  }
+  # add parameters to output
+  # global
+  for (id in names(parameter_list)) {
+    value <- parameter_list[[id]]
+    file_str <- paste(file_str, paste0(id, " <- user(", value, ")"), sep = "\n")
+  }
+  # local
+  for (reaction in reaction_list) {
+    for (param_id in names(reaction$local_parameters)) {
+      value <- reaction$local_parameters[[param_id]]
+      file_str <- paste(file_str, paste0(param_id, " <- ", value, " # Local parameter in ", reaction$name), sep = "\n")
+    }
+  }
+  # add compartments to output
+  for (id in names(compartment_list)) {
+    size <- compartment_list[[id]]
+    file_str <- paste(file_str, paste0(id, " <- ", size), sep = "\n")
+  }
+
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
   }
   if(grepl("root\\(",file_str)){
     file_str <- translate_root(file_str)
-  }
-
-  # add events
-  # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
-  #print(libSBML::Model_getNumEvents(model))
-  if(libSBML::Model_getNumEvents(model) > 0){
-    for (i in seq_len(libSBML::Model_getNumEvents(model))) {
-      event <- libSBML::Model_getEvent(model,i-1)
-      event_trigger <- libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
-      #print(event_trigger)
-      if(grepl("gt",event_trigger)){
-        event_trigger <- SBMLtoOdin:::sub_gt(event_trigger)
-      }
-      else if(grepl("geq",event_trigger)){
-        event_trigger <- SBMLtoOdin:::sub_geq(event_trigger)
-      }
-      #event_trigger <- gsub("time", "t", event_trigger)
-      for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
-        event_assign <- libSBML::Event_getEventAssignment(event, j-1)
-        event_var <- libSBML::EventAssignment_getVariable(event_assign)
-        event_var <- SBMLtoOdin:::in_reserved_lib(event_var, reserved_names_lib)
-        event_val <- libSBML::formulaToString(libSBML::EventAssignment_getMath(event_assign))
-        non_event_val <- var_params_dict[event_var]
-        var_params_dict_used[event_var] <- TRUE
-        var_formula <- paste(event_var, " <- if(", event_trigger, ") ", event_val, " else ",  non_event_val, sep = "")
-        file_str <- paste(file_str, var_formula, sep = "\n")
-      }
-    }
-    #libSBML::Model_getEvent(model,0)
-    #libSBML::formulaToString( libSBML::Trigger_getMath(libSBML::Event_getTrigger(libSBML::Model_getEvent(model,0))))
-
-    #libSBML::Event_getNumEventAssignments(libSBML::Model_getEvent(model,0))
-    #libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)
-    #libSBML::EventAssignment_getVariable(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0))
-    #libSBML::formulaToString(libSBML::EventAssignment_getMath(libSBML::Event_getEventAssignment(libSBML::Model_getEvent(model,0), 0)))
-  }
-  #print(file_str)
-  # add compartments
-  #print(file_str)
-  print("Fetching Compartments")
-  for (i in seq_len(libSBML::Model_getNumCompartments(model))) {
-    comp = (libSBML::Model_getCompartment(model,i-1))
-    file_str <- paste(file_str, paste(libSBML::Compartment_getId(comp), " <- ", libSBML::Compartment_getSize(comp), sep = ""), sep = "\n")
   }
   # Call function that replaces piecewise() by if statement
   #print(file_str)
@@ -962,12 +1133,13 @@ SBML_to_odin <- function(model, path_to_output){
     }
   }
   #print(file_str)
-  for (p in names(var_params_dict_used)) {
-    if(!(var_params_dict_used[p])){
-      file_str <- paste(file_str, paste(p, " <- user(", var_params_dict[p] , ")", sep = ""), sep = "\n")
-      var_params_dict_used[p] <- TRUE
-    }
-  }
+  # for (p in names(var_params_dict_used)) {
+  #   if(!(var_params_dict_used[p])){
+  #     file_str <- paste(file_str, paste(p, " <- user(", var_params_dict[p] , ")", sep = ""), sep = "\n")
+  #     var_params_dict_used[p] <- TRUE
+  #   }
+  # }
+
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
