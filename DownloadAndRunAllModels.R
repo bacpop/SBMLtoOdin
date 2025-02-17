@@ -17,7 +17,7 @@ ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
-for (i in 1:1073){
+for (i in 1:100){
   print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
@@ -27,6 +27,22 @@ ImportError # 155
 OdinError # 482
 ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
+
+
+# 17.02.2025
+# new series of testing while changing SBMLtoOdin script to a more list-based code, with parsing to string only at the end
+# BIOMD0000000007 throws OdinError:
+# Error: Self referencing expressions not allowed (except for arrays)
+#kp <- if(SPF >=  0.1) kp / 2 else 3.25 # (line 116)
+# but this is apparently not new
+# for models 1:100 I have odin 21 errors
+# "BIOMD0000000007" "BIOMD0000000016" "BIOMD0000000020" "BIOMD0000000024" "BIOMD0000000034" "BIOMD0000000036" "BIOMD0000000047" "BIOMD0000000050" "BIOMD0000000054" "BIOMD0000000055" "BIOMD0000000056" "BIOMD0000000059" "BIOMD0000000069" "BIOMD0000000075" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087" "BIOMD0000000088" "BIOMD0000000095" "BIOMD0000000096" "BIOMD0000000097"
+# all except 5 (20, 50, 59, 75, 81) are errors I had before
+# Let's check out these 5 first
+# 20 is fixed that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
+
+
+
 #151 (1-495), 70 (500-750)
 # common error messages:
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
@@ -48,7 +64,7 @@ OdinError_ids[1:OdinError]
 # with 9 models in the intersect
 # so, 308 models result in error in total
 # i.e. 704 can be translated and run successfully
-# that are 70%
+# that is 70%
 
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 
