@@ -39,8 +39,8 @@ OdinError_ids[1:OdinError]
 # "BIOMD0000000007" "BIOMD0000000016" "BIOMD0000000020" "BIOMD0000000024" "BIOMD0000000034" "BIOMD0000000036" "BIOMD0000000047" "BIOMD0000000050" "BIOMD0000000054" "BIOMD0000000055" "BIOMD0000000056" "BIOMD0000000059" "BIOMD0000000069" "BIOMD0000000075" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087" "BIOMD0000000088" "BIOMD0000000095" "BIOMD0000000096" "BIOMD0000000097"
 # all except 5 (20, 50, 59, 75, 81) are errors I had before
 # Let's check out these 5 first
-# 20 is fixed that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
-
+# 20 is fixed - that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
+# 50 is fixed - that was a problem with parameters/species that start with a number or an underscore
 
 
 #151 (1-495), 70 (500-750)

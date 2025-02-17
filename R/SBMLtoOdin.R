@@ -1065,15 +1065,6 @@ SBML_to_odin <- function(model, path_to_output){
   #   file_str <- paste(file_str, paste("deriv(",i_tr,")", " <- ", paste(dic_react[i], " ", sep = ""), sep = ""), sep = "\n")
   # }
 
-  # commenting this out for now, but I will need some version of this
-  # for (param_name in names(param_lib)) {
-  #   if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
-  #     bad_names[param_name] <- paste("p", param_name, sep = "")
-  #   }
-  #   else if(grepl("^[0-9+]",param_name, perl = TRUE)){
-  #     bad_names[param_name] <- paste("p", param_name, sep = "")
-  #   }
-  # }
 
 
   ### this one does not catch nuances like in all_biomod_ids[1]
@@ -1149,7 +1140,7 @@ SBML_to_odin <- function(model, path_to_output){
 
   ### add info from dictionaries to file string
   # Initial conditions
-  print(species_list)
+  #print(species_list)
   for (id in names(species_list)) {
     if(species_list[[id]]$initial_found){
       init_val <- species_list[[id]]$initialAmount
@@ -1332,6 +1323,16 @@ SBML_to_odin <- function(model, path_to_output){
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
+  }
+
+  # replace parameter and species names that start with a number or an underscore
+  for (param_name in c(names(parameter_list), names(species_list))) {
+    if(grepl("^\\_[0-9+]",param_name, perl = TRUE)){
+      bad_names[param_name] <- paste("p", param_name, sep = "")
+    }
+    else if(grepl("^[0-9+]",param_name, perl = TRUE)){
+      bad_names[param_name] <- paste("p", param_name, sep = "")
+    }
   }
   for (param_name in names(bad_names)) {
     #print(param_name)
