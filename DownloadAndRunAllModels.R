@@ -41,7 +41,7 @@ OdinError_ids[1:OdinError]
 # Let's check out these 5 first
 # 20 is fixed - that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
 # 50 is fixed - that was a problem with parameters/species that start with a number or an underscore
-
+# 59 is now working as well
 
 #151 (1-495), 70 (500-750)
 # common error messages:

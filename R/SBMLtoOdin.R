@@ -985,6 +985,7 @@ SBML_to_odin <- function(model, path_to_output){
       if(libSBML::KineticLaw_getNumParameters(law) > 0){
         for (j in 1:(libSBML::KineticLaw_getNumParameters(law))) {
           local_param_id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(law, j-1))
+          #print(local_param_id)
           local_param_id <- SBMLtoOdin:::in_reserved_lib(local_param_id, reserved_names_lib)
           #print(libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(law,j-1)))
           #print(local_param)
@@ -1188,6 +1189,26 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- paste(file_str, paste0("deriv(", id, ") <- ", deriv_equations[[id]]), sep = "\n")
   }
   # add parameters to output
+  # local
+  # BE CAREFUL: I assume here that a local parameter has a unique name (i.e. there is no other local or global parameter with the same name)
+  # this might not always be true
+  # in odin, there are no local and global parameters
+  # So I would need to change names if I want to make sure there are no names with more than one meaning / value
+  #print(reaction_list)
+  for (reaction in reaction_list) {
+    for (param_id in names(reaction$local_parameters)) {
+      #print(param_id)
+      if(!is.element(param_id, names(parameter_used_list))){
+        value <- reaction$local_parameters[[param_id]]
+        file_str <- paste(file_str, paste0(param_id, " <- ", value, " # Local parameter in ", reaction$name), sep = "\n")
+      }
+      else if(!parameter_used_list[[param_id]]){
+        value <- reaction$local_parameters[[param_id]]
+        file_str <- paste(file_str, paste0(param_id, " <- ", value, " # Local parameter in ", reaction$name), sep = "\n")
+        parameter_used_list[[param_id]] <- TRUE
+      }
+    }
+  }
   # global
   #print(parameter_list)
   #print(parameter_used_list)
@@ -1212,22 +1233,7 @@ SBML_to_odin <- function(model, path_to_output){
       }
     }
   }
-  # local
-  #print(reaction_list)
-  for (reaction in reaction_list) {
-    for (param_id in names(reaction$local_parameters)) {
-      #print(param_id)
-      if(!is.element(param_id, names(parameter_used_list))){
-          value <- reaction$local_parameters[[param_id]]
-          file_str <- paste(file_str, paste0(param_id, " <- ", value, " # Local parameter in ", reaction$name), sep = "\n")
-          parameter_used_list
-      }
-      else if(!parameter_used_list[[param_id]]){
-        value <- reaction$local_parameters[[param_id]]
-        file_str <- paste(file_str, paste0(param_id, " <- ", value, " # Local parameter in ", reaction$name), sep = "\n")
-      }
-    }
-  }
+
 
   # add events to output
   for (event in event_list) {
