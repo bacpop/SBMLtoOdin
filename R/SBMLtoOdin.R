@@ -380,6 +380,7 @@ translate_piecewise <- function(file_content){
     #piece_expr <- strsplit(file_content,"piecewise")[[1]]
   # (\\(([^()]|(?1))*\\))
   piece_expr <- strsplit(piece_expr_all,"piecewise\\(")[[1]]
+  piece_expr[2] <- gsub('.{1}$', '', piece_expr[2]) # remove closing bracket at the end
   piece_expr_all_new <- piece_expr_all
   i_test <- 0
   while(length(piece_expr) > 2 && i_test<10){
@@ -417,11 +418,21 @@ translate_piecewise <- function(file_content){
    }
     # to do: add neq
     #print(piece_expr[2])
-    piece_expr0 <- strsplit(x = piece_expr[2], split = ",")[[1]]
-    if(length(piece_expr0)){
-      if_part <- paste(piece_expr0[2:(length(piece_expr0)-1)], sep = "")
-    }
-    new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)] ,sep="" )
+    #piece_expr0 <- strsplit(x = piece_expr[2], split = ",")[[1]]
+    #piece_expr0 <- strsplit(piece_expr[2], ",(?![^(]*\\))", perl = TRUE)[[1]]
+    piece_expr0 <- strsplit(piece_expr[2], ",(?![^(]*\\))", perl = TRUE)[[1]]
+    ### this is not working
+    # missing exceptions for ")" towards end of piece_expr
+    #print(piece_expr0)
+    #if(length(piece_expr0)){
+    #  if_part <- paste(piece_expr0[2:(length(piece_expr0)-1)], sep = "")
+    #  print(if_part)
+    #}
+    if_part <- piece_expr0[2]
+    #print(if_part)
+    new_piece_expr <- paste("(",piece_expr[1], "if(", if_part, ") ", piece_expr0[1], " else ", piece_expr0[length(piece_expr0)], ")" ,sep="" )
+    #print(piece_expr_all)
+    #print(new_piece_expr)
   file_content <- gsub(piece_expr_all, new_piece_expr, file_content, fixed = TRUE)
   }
   file_content
@@ -731,6 +742,7 @@ SBML_to_odin <- function(model, path_to_output){
   print("Fetching Species")
   species_list <- list()
   boundary_cond_list <- list()
+  boundary_cond_rule_list <- list()
   for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
     species <- libSBML::Model_getSpecies(model, i-1)
     # find initial concentration
@@ -744,15 +756,29 @@ SBML_to_odin <- function(model, path_to_output){
       spec_conc = libSBML::Species_getInitialConcentration(species)
       conc_found <- TRUE
     }
+    is_mod <- FALSE
+    #print(libSBML::Species_getId(species))
+    # hmm, modifier species are species. But I need to test whether it is a modifier.
+    # not sure that there is a function
+    # I could iterate separately of modifiers and mark them here in the list
+    #print(libSBML::Species_getConstant(species))
     species_list[[libSBML::Species_getId(species)]] <- list(
       name = libSBML::Species_getId(species),
       compartment = libSBML::Species_getCompartment(species),
       initialAmount = spec_conc,
-      initial_found = conc_found
+      initial_found = conc_found,
+      is_modifier = is_mod,
+      is_constant = libSBML::Species_getConstant(species)
     )
+    #print(libSBML::Species_getBoundaryCondition(species))
     boundary_cond_list[[libSBML::Species_getId(species)]] <- libSBML::Species_getBoundaryCondition(species)
+    if(libSBML::Species_getBoundaryCondition(species)){
+      boundary_cond_rule_list[[libSBML::Species_getId(species)]] <- list(hasRule = FALSE, theRule = NA)
+    }
+
   }
 
+  #print(names(species_list))
   # find all initial species assignments that I might have missed
   if(libSBML::Model_getNumInitialAssignments(model)>0){
         for (j in seq_len(libSBML::Model_getNumInitialAssignments(model))) {
@@ -762,11 +788,15 @@ SBML_to_odin <- function(model, path_to_output){
           if(grepl("_init",conc)){
             conc <- paste(conc, "1",sep="")
           }
-          #print(conc)
-          species_list[[var_id]]$initialAmount = conc
-          species_list[[var_id]]$initial_found  <- TRUE
+          if(is.element(var_id, names(species_list))){
+            #print(conc)
+            species_list[[var_id]]$initialAmount = conc
+            species_list[[var_id]]$initial_found  <- TRUE
+          }
         }
   }
+  #print(names(species_list))
+
   # for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
   #   species = libSBML::Model_getSpecies(model, i-1)
   #   id = libSBML::Species_getId(species)
@@ -873,13 +903,19 @@ SBML_to_odin <- function(model, path_to_output){
   print("Fetching Rules")
   rule_list <- list()
   #print(libSBML::Model_getNumRules(model))
+  #print(names(parameter_list))
   if(libSBML::Model_getNumRules(model) > 0){
     for (i in 1:(libSBML::Model_getNumRules(model))) {
       rule <- libSBML::Model_getRule(model, i-1)
       if (libSBML::Rule_isRate(rule)) {
-        if(libSBML::Rule_isParameter(rule)){
+        param_id <- SBMLtoOdin:::in_reserved_lib(libSBML::Rule_getVariable(rule), reserved_names_lib)
+        #print(param_id)
+        if(libSBML::Rule_isParameter(rule) || is.element(param_id, parameter_list)){
+          #print(param_id)
           # this is a rule for a parameter, not for a species
-          param_id <- SBMLtoOdin:::in_reserved_lib(libSBML::Rule_getId(rule), reserved_names_lib)
+
+          #param_id <- SBMLtoOdin:::in_reserved_lib(libSBML::Rule_getId(rule), reserved_names_lib)
+
           #file_content <- paste(file_content, paste(c(paste("deriv(",param_id,")",sep = ""), libSBML::formulaToString(libSBML::Rule_getMath(libSBML::Model_getRule(m,i-1)))), collapse = " <- "), sep = "\n")
           #file_content <- paste(file_content, "\n", "initial(", param_id, ") <- ", var_params_dict[param_id], sep = "")
           #file_content <- paste(file_content, paste(c(libSBML::Rule_getId(libSBML::Model_getRule(m,i-1)), "1 + 0.5 * t"), collapse = " <- "), sep = "\n")
@@ -899,13 +935,23 @@ SBML_to_odin <- function(model, path_to_output){
       }
       else if(libSBML::Rule_isAssignment(rule)){
         variable <- Rule_getVariable(rule)
-        math <- formulaToString(Rule_getMath(rule))
+        # if it is a piecewise expression
+        #print(libSBML::formulaToString(Rule_getMath(rule)))
+        math <- libSBML::formulaToString(libSBML::Rule_getMath(rule))
+        if (grepl("piecewise",math)) {
+          math <- SBMLtoOdin:::translate_piecewise(math)
+        }
+
         # If species has no initial amount but has an assignment rule, use the rule for initialization
         if (variable %in% names(species_list) && (is.null(species_list[[variable]]$initialAmount) || is.na(species_list[[variable]]$initialAmount))) {
           species_list[[variable]]$initialAmount <- math
         }
         else if(variable %in% names(parameter_list)){
           parameter_list[[variable]]$value = math
+        }
+        if(is.element(variable, names(boundary_cond_list))){
+          boundary_cond_rule_list[[variable]]$hasRule <- TRUE
+          boundary_cond_rule_list[[variable]]$theRule <- math
         }
       }
       else if(libSBML::Rule_isScalar(rule)){
@@ -1025,6 +1071,27 @@ SBML_to_odin <- function(model, path_to_output){
       rate = math,
       local_parameters = local_parameter_list
     )
+
+    # # extract modifier (special case of species that do not need an ode)
+    # So, modifier are more complicated than that. Species can be modifiers in some reactions and reactants/products in others.
+    # Later
+
+    # for (j in seq_len(libSBML::Reaction_getNumModifiers(reaction))) {
+    #   mod <- libSBML::Reaction_getModifier(reaction, j-1)
+    #   #mod_name <- libSBML::ModifierSpeciesReference_getElementName(mod)
+    #   #print(mod_name)
+    #   mod_id <- libSBML::Species_getSpeciesType(mod)
+    #   #print(mod_id)
+    #   #print(names(species_list))
+    #   if(is.element(mod_id, names(species_list))){
+    #     #print("found a modifier")
+    #     print(mod_id)
+    #     species_list[[mod_id]]$is_modifier <- TRUE
+    #   }
+    #   #else{
+    #     #print(paste("Not sure what kind of a modifier this is:", mod_id))
+    #   #}
+    # }
   }
   # param_lib <- c()
   # for (i in seq_len(libSBML::Model_getNumReactions(model))){
@@ -1077,24 +1144,57 @@ SBML_to_odin <- function(model, path_to_output){
 
   # add events
   print("Fetching Events")
+  #print(parameter_list)
+  #print(species_list)
   event_list <- list()
   if(libSBML::Model_getNumEvents(model) > 0){
     for (i in 1:(libSBML::Model_getNumEvents(model))) {
       event <- libSBML::Model_getEvent(model, i-1)
       trigger <- libSBML::formulaToString(libSBML::Trigger_getMath(libSBML::Event_getTrigger(event)))
       #trigger <- gsub("time", "t", trigger)
-      #assignments <- list()
+      assignment_list <- list()
       for (j in seq_len(libSBML::Event_getNumEventAssignments(event))) {
         assign <- libSBML::Event_getEventAssignment(event, j-1)
+        assign_id <- libSBML::EventAssignment_getId(assign)
         event_var <- libSBML::EventAssignment_getVariable(assign)
         event_var <- SBMLtoOdin:::in_reserved_lib(event_var, reserved_names_lib)
         event_val <- libSBML::formulaToString(libSBML::EventAssignment_getMath(assign))
-        non_event_val <- parameter_list[[event_var]]$value
+        #print(event_var)
+        if(is.element(event_var, names(parameter_list))){
+          non_event_val <- parameter_list[[event_var]]$value
+          parameter_used_list[[event_var]] <- TRUE
+        }
+        else if(is.element(event_var, names(species_list))){
+          non_event_val <- species_list[[event_var]]$initialAmount
+        }
+        assignment_list[[assign_id]] <- list(trigger = trigger, event_val = event_val, event_var = event_var, non_event_val = non_event_val, is_duplicated = FALSE)
       }
-      event_list[[libSBML::Event_getId(event)]] <- list(trigger = trigger, event_val = event_val, event_var = event_var, non_event_val = non_event_val)
-      parameter_used_list[[event_var]] <- TRUE
+      event_list[[libSBML::Event_getId(event)]] <- assignment_list
+
     }
   }
+  #print((event_list))
+  #print("all event vars")
+  #print(event_list[[]]$event_var)
+  #print(unlist(lapply(event_list, "[[", "event_var")))
+  #event_vars_vec <- unlist(lapply(event_list, "[[", "event_var"))
+  #print(event_vars_vec[duplicated(event_vars_vec)])
+  #print(which(duplicated(event_vars_vec)))
+
+  # find events that apply to the same event_var
+  # Later
+  # dupl_events <- which(duplicated(event_vars_vec))
+  # if(length(dupl_events)>0){
+  #   for (i in dupl_events) {
+  #     dupl_event_var <- event_list[[i]]$event_var
+  #     #print(which(event_vars_vec == dupl_event_var))
+  #     event_list[[which(event_vars_vec == dupl_event_var)[1]]]$is_duplicated = TRUE
+  #     event_list[[which(event_vars_vec == dupl_event_var)[2]]]$is_duplicated = TRUE
+  #     #print(event_list[[which(event_vars_vec == dupl_event_var)[1]]]$trigger)
+  #     #print(event_list[[which(event_vars_vec == dupl_event_var)[2]]]$trigger)
+  #   }
+  # } # do the rest when parsing to file?
+
   # this is currently only focused on a very specific type of event (trigger by time >=x and only changes param values). Need to generalise this later.
   #print(libSBML::Model_getNumEvents(model))
   # if(libSBML::Model_getNumEvents(model) > 0){
@@ -1140,30 +1240,36 @@ SBML_to_odin <- function(model, path_to_output){
   }
 
   ### add info from dictionaries to file string
+  file_str <- paste(file_str, "# Initial Conditions", sep = "\n")
+
   # Initial conditions
   #print(species_list)
   for (id in names(species_list)) {
+    #print(id)
     if(species_list[[id]]$initial_found){
-      init_val <- species_list[[id]]$initialAmount
-      file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
-      file_str <- paste(file_str, paste0(id, "_init <- user(", init_val, ")"), sep = "\n")
+      if(!species_list[[id]]$is_modifier && !boundary_cond_list[[id]]){
+        init_val <- species_list[[id]]$initialAmount
+        file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
+        file_str <- paste(file_str, paste0(id, "_init <- user(", init_val, ")"), sep = "\n")
+      }
     }
-    else{
-      print(paste("No initial amount found for variable", id,))
+    else if(!boundary_cond_list[[id]]){
+      print(paste("No initial amount found for variable", id))
     }
   }
 
   # Differential equations (reactions)
+  file_str <- paste(file_str, "# Differential equations", sep = "\n")
   deriv_equations <- list()
   for (id in names(species_list)) {
-    if (!boundary_cond_list[[id]]) {
+    if (!boundary_cond_list[[id]] && !species_list[[id]]$is_constant) {
       deriv_equations[[id]] <- "0"
     }
   }
 
-  for (id in names(species_list)) {
-    deriv_equations[[id]] <- "0"
-  }
+  # for (id in names(species_list)) {
+  #   deriv_equations[[id]] <- "0"
+  # }
 
   for (reaction in reaction_list) {
     rate <- reaction$rate
@@ -1184,7 +1290,7 @@ SBML_to_odin <- function(model, path_to_output){
   for (variable in names(rule_list)) {
     deriv_equations[[variable]] <- rule_list[[variable]]
   }
-
+  #print(deriv_equations)
   for (id in names(deriv_equations)) {
     file_str <- paste(file_str, paste0("deriv(", id, ") <- ", deriv_equations[[id]]), sep = "\n")
   }
@@ -1209,9 +1315,25 @@ SBML_to_odin <- function(model, path_to_output){
       }
     }
   }
+  # boundary conditions / constant species
+  for (id in names(boundary_cond_list)) {
+    if(boundary_cond_list[[id]]){
+      if(boundary_cond_rule_list[[id]]$hasRule){
+        file_str <- paste(file_str, paste0(id, " <- ", boundary_cond_rule_list[[id]]$theRule), sep = "\n")
+        #print(boundary_cond_rule_list[[id]]$theRule)
+      }
+      else if(species_list[[id]]$is_constant){
+        #print(species_list[[id]]$initialAmount)
+        file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+      }
+    }
+
+  }
+
   # global
   #print(parameter_list)
   #print(parameter_used_list)
+  file_str <- paste(file_str, "# Parameters", sep = "\n")
   for (id in names(parameter_list)) {
     #print(id)
     #print(parameter_used_list[[id]])
@@ -1236,17 +1358,42 @@ SBML_to_odin <- function(model, path_to_output){
 
 
   # add events to output
+  file_str <- paste(file_str, "# Events", sep = "\n")
   for (event in event_list) {
-    var_formula <- paste(event$event_var, " <- if(", event$trigger, ") ", event$event_val, " else ",  event$non_event_val, sep = "")
-    file_str <- paste(file_str, var_formula, sep = "\n")
+    for (assign in event) {
+      var_formula <- paste(assign$event_var, " <- if(", assign$trigger, ") ", assign$event_val, " else ",  assign$non_event_val, sep = "")
+      file_str <- paste(file_str, var_formula, sep = "\n")
+    }
   }
 
+  #print(file_str)
+  # for (event in event_list) {
+  #   if(!event$is_duplicated){
+  #     var_formula <- paste(event$event_var, " <- if(", event$trigger, ") ", event$event_val, " else ",  event$non_event_val, sep = "")
+  #     file_str <- paste(file_str, var_formula, sep = "\n")
+  #   }
+  #   else{ # more complex events
+  #     dupl_event_var <- event$event_var
+  #     event_1_name <- names(event_list)[which(event_vars_vec == dupl_event_var)[1]]
+  #     event_1 <- event_list[[event_1_name]]
+  #     event_2_name <- names(event_list)[which(event_vars_vec == dupl_event_var)[2]]
+  #     event_2 <- event_list[[event_2_name]]
+  #     var_formula <- paste(event$event_var, " <- if(", event_1$trigger, "&& !", event_2$trigger, ") ", event_1$event_val," else if(", event_2$trigger, "&& !", event_1$trigger, ") ", event_2$event_val,  " else ", event_1$non_event_val, sep = "")
+  #     file_str <- paste(file_str, var_formula, sep = "\n")
+  #     # almost, need to remove this so it does not appear a second time
+  #   }
+  # }
+
+
+
   # add compartments to output
+  file_str <- paste(file_str, "# Compartments", sep = "\n")
   for (id in names(compartment_list)) {
     size <- compartment_list[[id]]
     file_str <- paste(file_str, paste0(id, " <- ", size), sep = "\n")
   }
 
+  #print(file_str)
   # Call function that replaces pow() by ^ if necessary
   if(grepl("pow\\(",file_str)){
     file_str <- translate_pow(file_str)
@@ -1361,7 +1508,7 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- gsub(paste("\\(", reserved_param, " ", sep = ""), paste("\\(", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
 
   }
-  file_str <- gsub("default", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
+  file_str <- gsub("default ", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   #substitute all mentions of time by t
   file_str <- gsub("time", "t", file_str)
   # write information into odin.dust file

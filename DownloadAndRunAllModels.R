@@ -17,7 +17,7 @@ ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
-for (i in 1:100){
+for (i in 601:1073){
   print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
@@ -42,6 +42,19 @@ OdinError_ids[1:OdinError]
 # 20 is fixed - that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
 # 50 is fixed - that was a problem with parameters/species that start with a number or an underscore
 # 59 is now working as well
+# 75 working as well - that was a problem when parameters appear locally and globally (assuming local definition is more important), is overriding the global parameters
+# 81 was working before but was not correct. Instead, I need to introduce features to recognise "modifier species" (species that do not change, i.e. do not have their own ODE but play a role in some of the equations (similar to parameters))
+# oxoM_EX <- if(t >=  3 && t <= 8) 10 else if(t >=  8) 0 else 0
+# still working on this. trying to catch duplicated events, continue on line 1300
+# this is more difficult than expected. leaving it for now
+
+# 24.02.2025
+# ImportError
+# "BIOMD0000000232" "BIOMD0000000234" "BIOMD0000000246" "BIOMD0000000256" "BIOMD0000000280"
+# "BIOMD0000000471"
+# "BIOMD0000000988" "BIOMD0000001061" "BIOMD0000001062" "BIOMD0000001063" "BIOMD0000001064" "BIOMD0000001066" "BIOMD0000001067" "BIOMD0000001068" "BIOMD0000001069" "BIOMD0000001070" "BIOMD0000001071" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076"
+# fixed models up to BIOMD0000000988
+
 
 #151 (1-495), 70 (500-750)
 # common error messages:
