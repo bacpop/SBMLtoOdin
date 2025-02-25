@@ -17,7 +17,7 @@ ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
-for (i in 601:1073){
+for (i in 1:100){
   print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
@@ -54,6 +54,25 @@ OdinError_ids[1:OdinError]
 # "BIOMD0000000471"
 # "BIOMD0000000988" "BIOMD0000001061" "BIOMD0000001062" "BIOMD0000001063" "BIOMD0000001064" "BIOMD0000001066" "BIOMD0000001067" "BIOMD0000001068" "BIOMD0000001069" "BIOMD0000001070" "BIOMD0000001071" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076"
 # fixed models up to BIOMD0000000988
+
+# 25.02.25
+# odin errors for models 1-100 (40!)
+# [1] "BIOMD0000000006" "BIOMD0000000007" "BIOMD0000000013" "BIOMD0000000015" "BIOMD0000000017" "BIOMD0000000018" "BIOMD0000000019" "BIOMD0000000023" "BIOMD0000000024" "BIOMD0000000025"
+#[11] "BIOMD0000000027" "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000034" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000047" "BIOMD0000000049"
+#[21] "BIOMD0000000051" "BIOMD0000000054" "BIOMD0000000055" "BIOMD0000000056" "BIOMD0000000061" "BIOMD0000000063" "BIOMD0000000064" "BIOMD0000000067" "BIOMD0000000068" "BIOMD0000000069"
+#[31] "BIOMD0000000070" "BIOMD0000000071" "BIOMD0000000076" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087" "BIOMD0000000088" "BIOMD0000000095" "BIOMD0000000096" "BIOMD0000000097"
+# fixed "BIOMD0000000006" (problem with boundary conditions)
+# "BIOMD0000000007" self referencing not allowed - not quite sure how to fix that
+# fixed "BIOMD0000000013" problem with boundary conditions that are constant without being defined as constant
+# "BIOMD0000000015", "BIOMD0000000017" - BIOMD0000000023 were fine then
+# "BIOMD0000000024" broken because of delay() must be the only call on the rhs
+# "BIOMD0000000025" too
+# "BIOMD0000000034" too
+# fixed "BIOMD0000000027" - was issue with constant species
+# "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000049" were fine then
+# fixed "BIOMD0000000047" (also translate Time to t now - I hope that's correct?)
+# "BIOMD0000000051" still not working Unknown variable txt
+# definition of time variable ..> defined in math section of assignment rule, then csymbol but I do not know how to access that
 
 
 #151 (1-495), 70 (500-750)

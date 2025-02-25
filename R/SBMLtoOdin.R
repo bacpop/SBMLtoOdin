@@ -773,7 +773,7 @@ SBML_to_odin <- function(model, path_to_output){
     #print(libSBML::Species_getBoundaryCondition(species))
     boundary_cond_list[[libSBML::Species_getId(species)]] <- libSBML::Species_getBoundaryCondition(species)
     if(libSBML::Species_getBoundaryCondition(species)){
-      boundary_cond_rule_list[[libSBML::Species_getId(species)]] <- list(hasRule = FALSE, theRule = NA)
+      boundary_cond_rule_list[[libSBML::Species_getId(species)]] <- list(hasRule = FALSE, theRule = NA, hasRateRule = FALSE, theRateRule = NA)
     }
 
   }
@@ -931,6 +931,12 @@ SBML_to_odin <- function(model, path_to_output){
         #math <- formulaToString(Rule_getMath(rule))
         #rule_list[[variable]] <- list(math = math,
 
+        else if(boundary_cond_list[[param_id]]){ #if species is boundary condition, i.e. does not depend on reactions
+          boundary_cond_rule_list[[param_id]]$hasRateRule <- TRUE
+          math <- libSBML::formulaToString(libSBML::Rule_getMath(rule))
+          boundary_cond_rule_list[[param_id]]$theRateRule <- math
+          print(math)
+        }
         # cannot deal with other rate rules yet
       }
       else if(libSBML::Rule_isAssignment(rule)){
@@ -948,6 +954,7 @@ SBML_to_odin <- function(model, path_to_output){
         }
         else if(variable %in% names(parameter_list)){
           parameter_list[[variable]]$value = math
+          #print(libSBML::Rule_getMath(rule))
         }
         if(is.element(variable, names(boundary_cond_list))){
           boundary_cond_rule_list[[variable]]$hasRule <- TRUE
@@ -1247,7 +1254,7 @@ SBML_to_odin <- function(model, path_to_output){
   for (id in names(species_list)) {
     #print(id)
     if(species_list[[id]]$initial_found){
-      if(!species_list[[id]]$is_modifier && !boundary_cond_list[[id]]){
+      if(!species_list[[id]]$is_modifier && !boundary_cond_list[[id]] && !species_list[[id]]$is_constant){
         init_val <- species_list[[id]]$initialAmount
         file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
         file_str <- paste(file_str, paste0(id, "_init <- user(", init_val, ")"), sep = "\n")
@@ -1326,8 +1333,29 @@ SBML_to_odin <- function(model, path_to_output){
         #print(species_list[[id]]$initialAmount)
         file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
       }
-    }
+      else if(boundary_cond_rule_list[[id]]$hasRateRule){
+        if(species_list[[id]]$initial_found){
+            init_val <- species_list[[id]]$initialAmount
+            file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
+            file_str <- paste(file_str, paste0(id, "_init <- user(", init_val, ")"), sep = "\n")
 
+            file_str <- paste(file_str, paste0("deriv(", id, ") <- ", boundary_cond_rule_list[[id]]$theRateRule), sep = "\n")
+          }
+      }
+      else if(species_list[[id]]$initial_found){ # since the "constant" attribute is optional, species might be constant without being declared to be constant
+        # so this is the case when I only find an initial amount and nothing else about the boundary condition
+        file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+      }
+    }
+  }
+  # add constant species
+  for (id in names(species_list)) {
+    #print(id)
+    if(species_list[[id]]$initial_found && species_list[[id]]$is_constant){
+      if(!species_list[[id]]$is_modifier && !boundary_cond_list[[id]]){
+        file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+      }
+    }
   }
 
   # global
@@ -1511,6 +1539,7 @@ SBML_to_odin <- function(model, path_to_output){
   file_str <- gsub("default ", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   #substitute all mentions of time by t
   file_str <- gsub("time", "t", file_str)
+  file_str <- gsub("Time", "t", file_str)
   # write information into odin.dust file
   writeLines(file_str, path_to_output,sep = "")
 }
