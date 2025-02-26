@@ -17,7 +17,7 @@ ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
-for (i in 1:100){
+for (i in 1:1073){
   print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
@@ -73,7 +73,7 @@ OdinError_ids[1:OdinError]
 # fixed "BIOMD0000000047" (also translate Time to t now - I hope that's correct?)
 # "BIOMD0000000051" still not working Unknown variable txt
 # definition of time variable ..> defined in math section of assignment rule, then csymbol but I do not know how to access that
-
+# ImportError: 16, OdinError: 319, working model prop: 1- (16 + 319)/1073 = 0.6877912
 
 #151 (1-495), 70 (500-750)
 # common error messages:

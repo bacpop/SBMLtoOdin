@@ -864,8 +864,8 @@ SBML_to_odin <- function(model, path_to_output){
   parameter_used_list <- list()
   for (i in seq_len(libSBML::Model_getNumParameters(model))) {
     parameter <- libSBML::Model_getParameter(model, i-1)
-    param_id <- libSBML::Parameter_getId(parameter)
-    param_id <- SBMLtoOdin:::in_reserved_lib(param_id, reserved_names_lib)
+    param_id_orig <- libSBML::Parameter_getId(parameter)
+    param_id <- SBMLtoOdin:::in_reserved_lib(param_id_orig, reserved_names_lib)
     if(grepl("_init",param_id)){
       param_id <- paste(param_id, "1",sep = "")
     }
@@ -874,7 +874,8 @@ SBML_to_odin <- function(model, path_to_output){
         value = libSBML::Parameter_getValue(parameter),
         const = TRUE,
         math = NA,
-        has_init <- FALSE)
+        has_init = FALSE,
+        orig_name = param_id_orig)
       parameter_used_list[[param_id]] <- FALSE
     }
     else{
@@ -883,7 +884,8 @@ SBML_to_odin <- function(model, path_to_output){
         value = libSBML::Parameter_getValue(parameter),
         const = FALSE,
         math = NA,
-        has_init = FALSE)
+        has_init = FALSE,
+        orig_name = param_id_orig)
       parameter_used_list[[param_id]] <- FALSE
     }
 
@@ -1070,7 +1072,14 @@ SBML_to_odin <- function(model, path_to_output){
     } else {
       "0"
     }
+    # for (param_id in names(parameter_list)) {
+    #   orig_param_id <- parameter_list[[param_id]]$orig_name
+    #   if(grepl(paste(" ",orig_param_id, " ", sep = ""),file_str, fixed = TRUE) || grepl(paste("(",orig_param_id, ",", sep = ""),file_str, fixed = TRUE) || grepl(paste(" ",orig_param_id, ")", sep = ""),file_str, fixed = TRUE)){
+    #     math <-
+    #   }
+    # }
 
+    print(math)
     reaction_list[[libSBML::Reaction_getId(reaction)]] <- list(
       name = libSBML::Reaction_getName(reaction),
       reactants = reactant_list,
@@ -1382,6 +1391,9 @@ SBML_to_odin <- function(model, path_to_output){
         file_str <- paste(file_str, paste0(id, " <- ", value), sep = "\n")
       }
     }
+    if(id != parameter_list[[id]]$orig_name){
+      file_str <- paste(file_str, paste0("# parameter \'", id, "\' is parameter \'", parameter_list[[id]]$orig_name, "\' in the original model. But this name is reserved in odin."), sep = "\n")
+    }
   }
 
 
@@ -1534,7 +1546,7 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- gsub(paste("\n", reserved_param, " ", sep = ""), paste("\n", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
     file_str <- gsub(paste(" ", reserved_param, "\\)", sep = ""), paste(" ", reserved_names_lib[reserved_param], "\\)", sep = ""), file_str)
     file_str <- gsub(paste("\\(", reserved_param, " ", sep = ""), paste("\\(", reserved_names_lib[reserved_param], " ", sep = ""), file_str)
-
+    file_str <- gsub(paste("\\(", reserved_param, "\\)", sep = ""), paste("\\(", reserved_names_lib[reserved_param], "\\)", sep = ""), file_str)
   }
   file_str <- gsub("default ", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
   #substitute all mentions of time by t
