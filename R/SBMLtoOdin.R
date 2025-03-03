@@ -675,7 +675,7 @@ sub_geq <- function(file_content){
 #'
 #' @examples
 #' SBMLtoOdin("/usr/models/my_SBML_model.xml","/usr/models/my_odin_model.R")
-SBML_to_odin <- function(model, path_to_output){
+SBML_to_odin <- function(model, path_to_output, input_str){
   ### test by using
   # library(devtools)
   # devtools::document()
@@ -702,7 +702,16 @@ SBML_to_odin <- function(model, path_to_output){
                                                                                "short1", "signed1", "sizeof1", "static1", "struct1", "switch1", "typedef1",
                                                                                "union1", "unsigned1", "void1", "volatile1", "while1")
 
+  # find out how time is defined in the model (if that is defined, I think it's just a feature of SBML3)
+  #input_str
+  if(grepl("definitionURL=\"http://www.sbml.org/sbml/symbols/time\">",input_str, fixed = TRUE)){
+    time_def_1 <- strsplit(input_str,"definitionURL=\"http://www.sbml.org/sbml/symbols/time\"> ", fixed = TRUE)[[1]][2]
+    time_def <- strsplit(time_def_1," </csymbol>", fixed = TRUE)[[1]][1]
 
+    reserved_names_lib[time_def] <- "t" # if time is defined as "t" there is no translation
+    # if it defined as something else, "t" will be translated to txt, and whatever time is defined as will be translated to "t"
+    #print(reserved_names_lib)
+  }
 
   file_str <-""
 
@@ -749,13 +758,24 @@ SBML_to_odin <- function(model, path_to_output){
     spec_conc <- NA
     conc_found <- FALSE
     if(!is.na(libSBML::Species_getInitialAmount(species))){
+      #print(libSBML::Species_getId(species))
+      #print(libSBML::Species_getInitialAmount(species))
       spec_conc <- libSBML::Species_getInitialAmount(species)
       conc_found <- TRUE
     }
-    else if(!is.na(libSBML::Species_getInitialConcentration(species))){
-      spec_conc = libSBML::Species_getInitialConcentration(species)
-      conc_found <- TRUE
+    if(!is.na(libSBML::Species_getInitialConcentration(species))){
+      if(!conc_found){
+        spec_conc = libSBML::Species_getInitialConcentration(species)
+        conc_found <- TRUE
+      }
+      else{ # also found a non-NA value in InitialAmount. Take the one that is non-zero for now
+        if(spec_conc == 0){
+          spec_conc = libSBML::Species_getInitialConcentration(species)
+          conc_found <- TRUE
+        }
+      }
     }
+    #print(libSBML::Species_getInitialConcentration(species))
     is_mod <- FALSE
     #print(libSBML::Species_getId(species))
     # hmm, modifier species are species. But I need to test whether it is a modifier.
@@ -775,8 +795,8 @@ SBML_to_odin <- function(model, path_to_output){
     if(libSBML::Species_getBoundaryCondition(species)){
       boundary_cond_rule_list[[libSBML::Species_getId(species)]] <- list(hasRule = FALSE, theRule = NA, hasRateRule = FALSE, theRateRule = NA)
     }
-
   }
+  #print(species_list)
 
   #print(names(species_list))
   # find all initial species assignments that I might have missed
@@ -937,7 +957,7 @@ SBML_to_odin <- function(model, path_to_output){
           boundary_cond_rule_list[[param_id]]$hasRateRule <- TRUE
           math <- libSBML::formulaToString(libSBML::Rule_getMath(rule))
           boundary_cond_rule_list[[param_id]]$theRateRule <- math
-          print(math)
+          #print(math)
         }
         # cannot deal with other rate rules yet
       }
@@ -952,6 +972,8 @@ SBML_to_odin <- function(model, path_to_output){
 
         # If species has no initial amount but has an assignment rule, use the rule for initialization
         if (variable %in% names(species_list) && (is.null(species_list[[variable]]$initialAmount) || is.na(species_list[[variable]]$initialAmount))) {
+        # actually, initialAssignment overrides initialAmount and initialConcentration if species is not constant
+        #if (variable %in% names(species_list) && !species_list[[variable]]$is_constant){
           species_list[[variable]]$initialAmount <- math
         }
         else if(variable %in% names(parameter_list)){
@@ -1039,16 +1061,17 @@ SBML_to_odin <- function(model, path_to_output){
     if (!is.null(law)) {
       if(libSBML::KineticLaw_getNumParameters(law) > 0){
         for (j in 1:(libSBML::KineticLaw_getNumParameters(law))) {
-          local_param_id <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(law, j-1))
+          local_param_id_orig <- libSBML::Parameter_getId(libSBML::KineticLaw_getParameter(law, j-1))
           #print(local_param_id)
-          local_param_id <- SBMLtoOdin:::in_reserved_lib(local_param_id, reserved_names_lib)
+          local_param_id <- SBMLtoOdin:::in_reserved_lib(local_param_id_orig, reserved_names_lib)
           #print(libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(law,j-1)))
           #print(local_param)
           parameter_list[[local_param_id]] <- list(
             value = libSBML::Parameter_getValue(libSBML::KineticLaw_getParameter(law,j-1)),
             const = TRUE,
             math = NA,
-            has_init = FALSE)
+            has_init = FALSE,
+            orig_name = local_param_id_orig)
           parameter_used_list[[local_param_id]] <- FALSE
         }
       }
@@ -1079,7 +1102,7 @@ SBML_to_odin <- function(model, path_to_output){
     #   }
     # }
 
-    print(math)
+    #print(math)
     reaction_list[[libSBML::Reaction_getId(reaction)]] <- list(
       name = libSBML::Reaction_getName(reaction),
       reactants = reactant_list,
@@ -1549,6 +1572,7 @@ SBML_to_odin <- function(model, path_to_output){
     file_str <- gsub(paste("\\(", reserved_param, "\\)", sep = ""), paste("\\(", reserved_names_lib[reserved_param], "\\)", sep = ""), file_str)
   }
   file_str <- gsub("default ", paste(" ", reserved_names_lib["default"], " ", sep = ""), file_str)
+  file_str <- gsub("default\n", paste(" ", reserved_names_lib["default"], "\n", sep = ""), file_str)
   #substitute all mentions of time by t
   file_str <- gsub("time", "t", file_str)
   file_str <- gsub("Time", "t", file_str)
@@ -1569,9 +1593,10 @@ SBML_to_odin <- function(model, path_to_output){
 #' @examples
 #' importSBMLfromFile("/usr/model_files/my_model.xml")
 importSBMLfromFile <- function(path_to_input, path_to_output = "odinModel.R"){
+  model_string <- readChar(path_to_input, file.info(path_to_input)$size)
   doc = libSBML::readSBMLFromFile(path_to_input)
   model = libSBML::SBMLDocument_getModel(doc)
-  SBMLtoOdin:::SBML_to_odin(model,path_to_output)
+  SBMLtoOdin:::SBML_to_odin(model,path_to_output, model_string)
 }
 
 #' Title
@@ -1614,13 +1639,15 @@ importSBMLfromBioModels <- function(model_id, path_to_output = "odinModel.R"){
   filename = URLencode(filename, reserved = TRUE)
   #filename = gsub(" ", "%20", filename)
 
+  #print(filename)
   # check whether model is in sbml file format, otherwise abort
   file_ext <- strsplit(filename,"\\.")[[1]][length(strsplit(filename,"\\.")[[1]])]
   if (file_ext != "xml"){
     stop(paste("Model is of file format", file_ext, "instead of xml. SBMLtoOdin only imports sbml files."))
   }
   res2 = httr::GET(paste("https://www.ebi.ac.uk/biomodels/model/download/", model_id, "?filename=", filename, sep = ""))
+  model_string = (rawToChar(res2$content))
   doc = libSBML::readSBMLFromString(rawToChar(res2$content))
   model = libSBML::SBMLDocument_getModel(doc)
-  SBMLtoOdin:::SBML_to_odin(model,path_to_output)
+  SBMLtoOdin:::SBML_to_odin(model,path_to_output, model_string)
 }

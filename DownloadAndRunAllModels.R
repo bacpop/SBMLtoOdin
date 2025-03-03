@@ -17,7 +17,7 @@ ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
 #for (i in 1:1073) {
-for (i in 1:1073){
+for (i in 1:200){
   print(paste("Model", i))
   tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
   tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
@@ -69,11 +69,77 @@ OdinError_ids[1:OdinError]
 # "BIOMD0000000025" too
 # "BIOMD0000000034" too
 # fixed "BIOMD0000000027" - was issue with constant species
-# "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000049" were fine then
+# "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000049" "BIOMD0000000064" "BIOMD0000000067" BIOMD0000000068 "BIOMD0000000070" "BIOMD0000000071" "BIOMD0000000076" were fine then
 # fixed "BIOMD0000000047" (also translate Time to t now - I hope that's correct?)
 # "BIOMD0000000051" still not working Unknown variable txt
 # definition of time variable ..> defined in math section of assignment rule, then csymbol but I do not know how to access that
 # ImportError: 16, OdinError: 319, working model prop: 1- (16 + 319)/1073 = 0.6877912
+# 26.02.25
+# fixed BIOMD0000000054 (had problem with reserved parameter list)
+# BIOMD0000000055 also time as t defined (Unknown variable txt)
+# BIOMD0000000056 Self referencing expressions not allowed (except for arrays)
+# BIOMD000000061 broken: Error in strsplit(filename, "\\.")[[1]] : subscript out of bounds
+# BIOMD0000000063 broken: Unknown variable Vhk VratioVmax <- Vhk / (cytoplasm * parameter_7) # (line 25)
+# fixed BIOMD0000000069: issue with replacing "default"
+# BIOMD0000000077 broken: Error: variables on lhs must be within deriv() or initial() (H) H <- if(t >  5) 0 else 0 # (line 36)
+# BIOMD0000000081 broken: Error: variables on lhs must be within deriv() or initial() (oxoM_EX) oxoM_EX <- if(t >=  3) 10 else 0 # (line 106) oxoM_EX <- if(geq(t, 8)) 0 else 0 # (line 107)
+# BIOMD0000000087 broken: Error: Self referencing expressions not allowed (except for arrays) Mec1RPAssDNA <- if(Mec1RPAssDNA + RPAssDNA + ssDNA <=  1) 0 else 0 # (line 202)
+# BIOMD0000000088 broken: Error: Duplicate entries must all be array assignments (s2) s2 <- 0 # (line 298) s2 <- if(txt >=  300) 0.01 else 0 # (line 313)
+# BIOMD0000000095 broken: Error: Unknown variable txt ld <- if(txt >  30) 1 else 0 # (line 156)
+# BIOMD0000000096 broken: Error: Self referencing expressions not allowed (except for arrays) Day_in_hours <- if(Day_in_hours - txt <=  0) Day_in_hours + 24 else 24 # (line 158)
+# BIOMD0000000097 broken: Error: Self referencing expressions not allowed (except for arrays) Day_in_hours <- if(Day_in_hours - txt <=  0) Day_in_hours + 24 else 24 # (line 157)
+
+# 03.03.2025
+# Models 101-200
+# "BIOMD0000000101" "BIOMD0000000104" "BIOMD0000000110" "BIOMD0000000111" "BIOMD0000000120" "BIOMD0000000121" "BIOMD0000000122" "BIOMD0000000125" "BIOMD0000000126" "BIOMD0000000127"
+# "BIOMD0000000129" "BIOMD0000000130" "BIOMD0000000131" "BIOMD0000000132" "BIOMD0000000133" "BIOMD0000000134" "BIOMD0000000135" "BIOMD0000000136" "BIOMD0000000137" "BIOMD0000000139"
+# "BIOMD0000000140" "BIOMD0000000141" "BIOMD0000000142" "BIOMD0000000144" "BIOMD0000000148" "BIOMD0000000149" "BIOMD0000000152" "BIOMD0000000153" "BIOMD0000000154" "BIOMD0000000155"
+# "BIOMD0000000158" "BIOMD0000000161" "BIOMD0000000162" "BIOMD0000000164" "BIOMD0000000165" "BIOMD0000000167" "BIOMD0000000179" "BIOMD0000000180" "BIOMD0000000188" "BIOMD0000000189"
+# "BIOMD0000000195" "BIOMD0000000196"
+# fixed "BIOMD0000000101" which was unknown variable txt (I now read the defintion of the time variable if it exists)
+# that also fixed BIOMD0000000051, BIOMD0000000055, BIOMD0000000095
+
+# Model BIOMD0000000104
+Model <- model_generator$new()
+Model_res <- Model$run(0:10)
+cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+matplot(Model_res[, 1], Model_res[, -1], xlab = "Time", ylab = "Number of individuals",
+        type = "l", col = cols, lty = 1, ylim = c(0,1.2))
+legend("topright", lwd = 1, col = cols, legend = colnames(Model_res)[-1], bty = "n")
+
+# problem seems to be that libSBML::Species_getInitialAmount(species) returns 0 (should be NA)
+# but the value is actually set in libSBML::Species_getInitialConcentration(species)
+# that's fixed now
+# but I am still missing the assignment rule for species_3 for some reason
+# species_3 is a modifier, has an Assignment rule and an initialAssigment. These seem to create conflicts
+
+# this creates the correct results
+# Initial Conditions
+initial(species_0) <- species_0_init
+species_0_init <- user(1)
+initial(species_1) <- species_1_init
+species_1_init <- user(0)
+#initial(species_2) <- species_2_init
+#species_2_init <- user(0)
+#initial(species_3) <- species_3_init
+#species_3_init <- user(0)
+initial(species_4) <- species_4_init
+species_4_init <- user(0)
+# Differential equations
+deriv(species_0) <- 0 - 1 * compartment_0 * species_0 * species_2 * k1
+deriv(species_1) <- 0 + 1 * compartment_0 * species_0 * species_2 * k1 - 1 * compartment_0 * k2 * species_1 * species_3
+#deriv(species_2) <- 0
+#deriv(species_3) <- 0
+deriv(species_4) <- 0 + 1 * compartment_0 * k2 * species_1 * species_3
+species_5 <- 1
+# Parameters
+k1 <- user(1)
+k2 <- user(1)
+# Events
+species_2 <- if(t >=  1) 0.4 else 1
+species_3 <- species_5 - species_2
+# Compartments
+compartment_0 <- 1
 
 #151 (1-495), 70 (500-750)
 # common error messages:
