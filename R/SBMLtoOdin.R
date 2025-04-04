@@ -1363,7 +1363,10 @@ SBML_to_odin <- function(model, path_to_output, input_str){
       }
       else if(species_list[[id]]$is_constant){
         #print(species_list[[id]]$initialAmount)
-        file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+        #file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+        file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
+        file_str <- paste(file_str, paste0(id, "_init <- user(", species_list[[id]]$initialAmount, ")"), sep = "\n")
+        file_str <- paste(file_str, paste0("deriv(", id, ") <- 0"), sep = "\n")
       }
       else if(boundary_cond_rule_list[[id]]$hasRateRule){
         if(species_list[[id]]$initial_found){
@@ -1376,7 +1379,11 @@ SBML_to_odin <- function(model, path_to_output, input_str){
       }
       else if(species_list[[id]]$initial_found){ # since the "constant" attribute is optional, species might be constant without being declared to be constant
         # so this is the case when I only find an initial amount and nothing else about the boundary condition
-        file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
+        # will write "empty" ode, so that species appears in output (and plots) of model
+        file_str <- paste(file_str, paste0("initial(", id, ") <- ", id, "_init"), sep = "\n")
+        file_str <- paste(file_str, paste0(id, "_init <- user(", species_list[[id]]$initialAmount, ")"), sep = "\n")
+        file_str <- paste(file_str, paste0("deriv(", id, ") <- 0"), sep = "\n")
+        #file_str <- paste(file_str, paste0(id, " <- ", species_list[[id]]$initialAmount), sep = "\n")
       }
     }
   }

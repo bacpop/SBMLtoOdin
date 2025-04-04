@@ -9,18 +9,22 @@ library(devtools)
 load_all() # loads functions from SBMLtoOdin package
 
 ### example 1
+
 # SIR model example (Malaysia)
 importSBMLfromBioModels("BIOMD0000000982","../LawModel.R")
 
 model_generator <- odin::odin("../LawModel.R") # creates model
 LawModel <- model_generator$new() #creates object, with parameters if needed
 LawModel_res <- LawModel$run(0:150) # runs model forward in time, for specified time
+# plot simulation
+matplot(LawModel_res[, 1], LawModel_res[, c(3,4)], xlab = "Time", ylab = "Number of individuals",
+        type = "l", col = c(I = "#E69F00", R = "#56B4E9"), lty = 1, ylim = c(0,7000), lwd = 3)
+legend(x = 50, y =4000, lwd = 3, col = c("#E69F00", "#56B4E9"), legend = c("I", "R"), bty = "n")
+
 
 
 cols <- c(S = "#000000", I = "#E69F00", R = "#56B4E9") # defines colors for plot
-matplot(LawModel_res[, 1], LawModel_res[, c(3,4)], xlab = "Time", ylab = "Number of individuals",
-        type = "l", col = cols[c(2,3)], lty = 1, ylim = c(0,7000))
-legend("topright", lwd = 1, col = cols, legend = c("S", "I", "R"), bty = "n")
+
 # S is not shown in this version of the plot because it is very large compared to I and R
 
 
@@ -46,6 +50,29 @@ legend("topright", lwd = 1, col = cols, legend = colnames(MothesModel_res)[-1], 
 # testing whether increasing time is a problem in odin / R
 # no.
 # It must be a problem in js
+
+cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# example 3
+#BIOMD0000000012
+
+# import model using SBMLtoOdin package
+SBMLtoOdin::importSBMLfromBioModels("BIOMD0000000012","../Repressilator.R")
+
+# run model
+model_generator_rep <- odin::odin("../Repressilator.R",verbose = FALSE) # creates model
+RepModel <- model_generator_rep$new() #creates object, with parameters if needed
+RepModel_res <- RepModel$run(0:300) # runs model forward in time, for specified time
+
+# run model
+model_generator <- odin::odin("../Repressilator.R") # creates model
+RepModel <- model_generator$new() #generates executable model
+RepModel_res <- RepModel$run(0:300) # runs model forward in time
+
+# create plot
+matplot(RepModel_res[, 1], RepModel_res[, -1], xlab = "Time", ylab = "Species",
+        type = "l", col = cols, lty = 1, lwd = 3)
+legend("topleft", lwd = 3, col = cols, legend = colnames(RepModel_res)[-1], bty = "n")
+
 
 ### more examples
 example_model_ids <- c("BIOMD0000000002", "BIOMD0000000003", "BIOMD0000000004","BIOMD0000000005","BIOMD0000000006","BIOMD0000000008","BIOMD0000000011","BIOMD0000000012","BIOMD0000000014","BIOMD0000000017")
