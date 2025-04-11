@@ -59,7 +59,7 @@ cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D5
 SBMLtoOdin::importSBMLfromBioModels("BIOMD0000000012","../Repressilator.R")
 
 # run model
-model_generator_rep <- odin::odin("../Repressilator.R",verbose = FALSE) # creates model
+model_generator_rep <- odin::odin("../Repressilator.R") # creates model
 RepModel <- model_generator_rep$new() #creates object, with parameters if needed
 RepModel_res <- RepModel$run(0:300) # runs model forward in time, for specified time
 

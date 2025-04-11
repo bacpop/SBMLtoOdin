@@ -19,17 +19,22 @@ curr_success2 <- TRUE
 ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
+
+
 #for (i in 1:1073) {
 for (i in 1:1073){
   print(paste("Model", i))
-  curr_success1 <- TRUE
-  curr_success2 <- TRUE
-  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]; curr_success1 <- FALSE}, warning = function(w) { print("ImportSBML warning") })
-  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; curr_success2 <- FALSE; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
-  #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
-  if(curr_success1 & curr_success2){
-    successes <- successes + 1
+  #curr_success1 <- TRUE
+  #curr_success2 <- TRUE
+  reading_success <- TRUE
+  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]; reading_success <- FALSE}, warning = function(w) { print("ImportSBML warning") })
+  if(reading_success){
+    tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
   }
+  #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
+  #if(curr_success1 & curr_success2){
+   # successes <- successes + 1
+  #}
 }
 ImportError # 155
 OdinError # 482
@@ -37,7 +42,19 @@ ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
 
 
-# 040.04.25
+# 11.04.25
+# > ImportError # 155
+#[1] 874
+#> OdinError # 482
+#[1] 211
+# sum = 1085 ... so all of them?
+
+# fixed some right away, now:
+# > ImportError #  428
+# > OdinError # 239
+# 667 errors
+
+# 04.04.25
 # ImportError # 16
 # [1] "BIOMD0000000429" "BIOMD0000000570" "BIOMD0000000627" "BIOMD0000000650" "BIOMD0000000670" "BIOMD0000000856" "BIOMD0000001066" "BIOMD0000001067" "BIOMD0000001068"
 # [10] "BIOMD0000001069" "BIOMD0000001070" "BIOMD0000001071" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076"
@@ -78,6 +95,7 @@ OdinError_ids[1:OdinError]
 
 #successes
 #[1] 1073
+# I don't know why but this is not working
 
 # 17.02.2025
 # new series of testing while changing SBMLtoOdin script to a more list-based code, with parsing to string only at the end
