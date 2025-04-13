@@ -18,5 +18,5 @@ no return
 Title
 }
 \examples{
-importSBMLfromBioModels(biomodels_id, output_directory)
+importSBMLfromBioModels("BIOMD0000000012", "/usr/model_files/my_model.xml")
 }

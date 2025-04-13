@@ -18,5 +18,5 @@ no return
 Title
 }
 \examples{
-importSBMLfromFile("/usr/model_files/my_model.xml")
+importSBMLfromFile("/usr/model_files/my_model.xml", "/usr/model_files/my_model.R")
 }

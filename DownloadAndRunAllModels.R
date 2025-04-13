@@ -19,6 +19,8 @@ curr_success2 <- TRUE
 ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
+ImportError_messages <- c()
+
 
 
 #for (i in 1:1073) {
@@ -27,7 +29,8 @@ for (i in 1:1073){
   #curr_success1 <- TRUE
   #curr_success2 <- TRUE
   reading_success <- TRUE
-  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]; reading_success <- FALSE}, warning = function(w) { print("ImportSBML warning") })
+  #tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]; reading_success <- FALSE}, warning = function(w) { print("ImportSBML warning") })
+  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) {ImportError <<- ImportError + 1; last.error <<- w; ImportError_messages[ImportError] <<- last.error$message;  ImportError_ids[ImportError] <<-  all_biomod_ids[i]})
   if(reading_success){
     tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
   }
@@ -53,6 +56,12 @@ OdinError_ids[1:OdinError]
 # > ImportError #  428
 # > OdinError # 239
 # 667 errors
+
+# 13.04.25
+# added ImportError_messages
+# can now check what is going wrong
+# had an issue with "reaction" being undefined because a part of fetching reactions had escaped the for-loop
+
 
 # 04.04.25
 # ImportError # 16
