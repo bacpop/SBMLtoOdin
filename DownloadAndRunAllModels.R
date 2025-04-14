@@ -13,20 +13,218 @@ all_biomod_ids <- json_data[[2]]
 
 ImportError <- 0
 OdinError <- 0
+successes <- 0
+curr_success1 <- TRUE
+curr_success2 <- TRUE
 ImportError_ids <- rep(NA,1073)
 OdinError_ids <- rep(NA,1073)
 OdinError_messages <- rep(NA, 1073)
+ImportError_messages <- c()
+
+
+
 #for (i in 1:1073) {
 for (i in 1:1073){
   print(paste("Model", i))
-  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]}, warning = function(w) { print("ImportSBML warning") })
-  tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
+  #curr_success1 <- TRUE
+  #curr_success2 <- TRUE
+  reading_success <- TRUE
+  #tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) { print("ImportSBML error"); ImportError <<- ImportError + 1; ImportError_ids[ImportError] <<-  all_biomod_ids[i]; reading_success <- FALSE}, warning = function(w) { print("ImportSBML warning") })
+  tryCatch( { importSBMLfromBioModels(all_biomod_ids[i],"../TestModel.R")}, error = function(w) {ImportError <<- ImportError + 1; last.error <<- w; ImportError_messages[ImportError] <<- last.error$message;  ImportError_ids[ImportError] <<-  all_biomod_ids[i]})
+  if(reading_success){
+    tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(m) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i]; OdinError_messages[OdinError] <<- as.character(conditionMessage(m))})
+  }
   #tryCatch( { model_generator <- odin::odin("../TestModel.R") }, error = function(w) { print("odin error"); OdinError <<- OdinError +1; OdinError_ids[OdinError] <<-  all_biomod_ids[i] })
+  #if(curr_success1 & curr_success2){
+   # successes <- successes + 1
+  #}
 }
 ImportError # 155
 OdinError # 482
 ImportError_ids[1:ImportError]
 OdinError_ids[1:OdinError]
+
+
+# 11.04.25
+# > ImportError # 155
+#[1] 874
+#> OdinError # 482
+#[1] 211
+# sum = 1085 ... so all of them?
+
+# fixed some right away, now:
+# > ImportError #  428
+# > OdinError # 239
+# 667 errors
+
+# 13.04.25
+# added ImportError_messages
+# can now check what is going wrong
+# had an issue with "reaction" being undefined because a part of fetching reactions had escaped the for-loop
+
+
+# 04.04.25
+# ImportError # 16
+# [1] "BIOMD0000000429" "BIOMD0000000570" "BIOMD0000000627" "BIOMD0000000650" "BIOMD0000000670" "BIOMD0000000856" "BIOMD0000001066" "BIOMD0000001067" "BIOMD0000001068"
+# [10] "BIOMD0000001069" "BIOMD0000001070" "BIOMD0000001071" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076"
+# OdinError # 297
+# [1] "BIOMD0000000007" "BIOMD0000000024" "BIOMD0000000025" "BIOMD0000000034" "BIOMD0000000056" "BIOMD0000000063" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087"
+#[10] "BIOMD0000000088" "BIOMD0000000096" "BIOMD0000000097" "BIOMD0000000104" "BIOMD0000000110" "BIOMD0000000111" "BIOMD0000000120" "BIOMD0000000121" "BIOMD0000000122"
+#[19] "BIOMD0000000125" "BIOMD0000000126" "BIOMD0000000127" "BIOMD0000000129" "BIOMD0000000130" "BIOMD0000000131" "BIOMD0000000132" "BIOMD0000000133" "BIOMD0000000134"
+#[28] "BIOMD0000000135" "BIOMD0000000136" "BIOMD0000000137" "BIOMD0000000139" "BIOMD0000000140" "BIOMD0000000141" "BIOMD0000000142" "BIOMD0000000144" "BIOMD0000000148"
+#[37] "BIOMD0000000149" "BIOMD0000000152" "BIOMD0000000153" "BIOMD0000000154" "BIOMD0000000155" "BIOMD0000000158" "BIOMD0000000162" "BIOMD0000000188" "BIOMD0000000189"
+#[46] "BIOMD0000000195" "BIOMD0000000196" "BIOMD0000000234" "BIOMD0000000235" "BIOMD0000000237" "BIOMD0000000241" "BIOMD0000000244" "BIOMD0000000245" "BIOMD0000000248"
+#[55] "BIOMD0000000255" "BIOMD0000000262" "BIOMD0000000263" "BIOMD0000000264" "BIOMD0000000265" "BIOMD0000000268" "BIOMD0000000281" "BIOMD0000000285" "BIOMD0000000287"
+#[64] "BIOMD0000000290" "BIOMD0000000297" "BIOMD0000000301" "BIOMD0000000305" "BIOMD0000000312" "BIOMD0000000316" "BIOMD0000000317" "BIOMD0000000318" "BIOMD0000000320"
+#[73] "BIOMD0000000321" "BIOMD0000000327" "BIOMD0000000337" "BIOMD0000000338" "BIOMD0000000339" "BIOMD0000000340" "BIOMD0000000342" "BIOMD0000000348" "BIOMD0000000349"
+#[82] "BIOMD0000000350" "BIOMD0000000368" "BIOMD0000000369" "BIOMD0000000380" "BIOMD0000000404" "BIOMD0000000408" "BIOMD0000000410" "BIOMD0000000417" "BIOMD0000000418"
+#[91] "BIOMD0000000419" "BIOMD0000000420" "BIOMD0000000421" "BIOMD0000000422" "BIOMD0000000436" "BIOMD0000000437" "BIOMD0000000439" "BIOMD0000000446" "BIOMD0000000450"
+#[100] "BIOMD0000000451" "BIOMD0000000457" "BIOMD0000000466" "BIOMD0000000468" "BIOMD0000000474" "BIOMD0000000479" "BIOMD0000000480" "BIOMD0000000488" "BIOMD0000000493"
+#[109] "BIOMD0000000494" "BIOMD0000000499" "BIOMD0000000528" "BIOMD0000000529" "BIOMD0000000531" "BIOMD0000000532" "BIOMD0000000534" "BIOMD0000000535" "BIOMD0000000536"
+#[118] "BIOMD0000000537" "BIOMD0000000540" "BIOMD0000000541" "BIOMD0000000542" "BIOMD0000000547" "BIOMD0000000551" "BIOMD0000000554" "BIOMD0000000555" "BIOMD0000000556"
+#[127] "BIOMD0000000561" "BIOMD0000000562" "BIOMD0000000563" "BIOMD0000000568" "BIOMD0000000571" "BIOMD0000000575" "BIOMD0000000577" "BIOMD0000000578" "BIOMD0000000580"
+#[136] "BIOMD0000000581" "BIOMD0000000582" "BIOMD0000000589" "BIOMD0000000591" "BIOMD0000000592" "BIOMD0000000593" "BIOMD0000000599" "BIOMD0000000601" "BIOMD0000000603"
+#[145] "BIOMD0000000604" "BIOMD0000000605" "BIOMD0000000606" "BIOMD0000000607" "BIOMD0000000609" "BIOMD0000000610" "BIOMD0000000611" "BIOMD0000000612" "BIOMD0000000613"
+#[154] "BIOMD0000000619" "BIOMD0000000620" "BIOMD0000000621" "BIOMD0000000628" "BIOMD0000000632" "BIOMD0000000634" "BIOMD0000000637" "BIOMD0000000638" "BIOMD0000000642"
+#[163] "BIOMD0000000643" "BIOMD0000000644" "BIOMD0000000645" "BIOMD0000000658" "BIOMD0000000659" "BIOMD0000000660" "BIOMD0000000664" "BIOMD0000000665" "BIOMD0000000667"
+#[172] "BIOMD0000000668" "BIOMD0000000669" "BIOMD0000000670" "BIOMD0000000672" "BIOMD0000000673" "BIOMD0000000674" "BIOMD0000000675" "BIOMD0000000678" "BIOMD0000000683"
+#[181] "BIOMD0000000693" "BIOMD0000000695" "BIOMD0000000696" "BIOMD0000000698" "BIOMD0000000700" "BIOMD0000000703" "BIOMD0000000706" "BIOMD0000000711" "BIOMD0000000718"
+#[190] "BIOMD0000000721" "BIOMD0000000727" "BIOMD0000000731" "BIOMD0000000734" "BIOMD0000000735" "BIOMD0000000736" "BIOMD0000000739" "BIOMD0000000775" "BIOMD0000000789"
+#[199] "BIOMD0000000791" "BIOMD0000000801" "BIOMD0000000806" "BIOMD0000000807" "BIOMD0000000808" "BIOMD0000000814" "BIOMD0000000816" "BIOMD0000000817" "BIOMD0000000818"
+#[208] "BIOMD0000000820" "BIOMD0000000822" "BIOMD0000000825" "BIOMD0000000826" "BIOMD0000000828" "BIOMD0000000829" "BIOMD0000000833" "BIOMD0000000835" "BIOMD0000000838"
+#[217] "BIOMD0000000841" "BIOMD0000000846" "BIOMD0000000858" "BIOMD0000000859" "BIOMD0000000860" "BIOMD0000000862" "BIOMD0000000864" "BIOMD0000000872" "BIOMD0000000876"
+#[226] "BIOMD0000000879" "BIOMD0000000901" "BIOMD0000000907" "BIOMD0000000918" "BIOMD0000000923" "BIOMD0000000926" "BIOMD0000000928" "BIOMD0000000943" "BIOMD0000000945"
+#[235] "BIOMD0000000946" "BIOMD0000000948" "BIOMD0000000949" "BIOMD0000000950" "BIOMD0000000952" "BIOMD0000000955" "BIOMD0000000956" "BIOMD0000000958" "BIOMD0000000960"
+#[244] "BIOMD0000000961" "BIOMD0000000962" "BIOMD0000000963" "BIOMD0000000967" "BIOMD0000000970" "BIOMD0000000974" "BIOMD0000000976" "BIOMD0000000978" "BIOMD0000000979"
+#[253] "BIOMD0000000980" "BIOMD0000000983" "BIOMD0000000984" "BIOMD0000000989" "BIOMD0000000990" "BIOMD0000000991" "BIOMD0000000994" "BIOMD0000000995" "BIOMD0000000996"
+#[262] "BIOMD0000000997" "BIOMD0000000998" "BIOMD0000000999" "BIOMD0000001000" "BIOMD0000001001" "BIOMD0000001002" "BIOMD0000001003" "BIOMD0000001005" "BIOMD0000001006"
+#[271] "BIOMD0000001007" "BIOMD0000001009" "BIOMD0000001010" "BIOMD0000001012" "BIOMD0000001019" "BIOMD0000001020" "BIOMD0000001025" "BIOMD0000001026" "BIOMD0000001027"
+#[280] "BIOMD0000001028" "BIOMD0000001029" "BIOMD0000001039" "BIOMD0000001040" "BIOMD0000001043" "BIOMD0000001044" "BIOMD0000001059" "BIOMD0000001061" "BIOMD0000001062"
+#[289] "BIOMD0000001063" "BIOMD0000001064" "BIOMD0000001072" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076" "BIOMD0000001077" "BIOMD0000001078"
+
+#successes
+#[1] 1073
+# I don't know why but this is not working
+
+# 17.02.2025
+# new series of testing while changing SBMLtoOdin script to a more list-based code, with parsing to string only at the end
+# BIOMD0000000007 throws OdinError:
+# Error: Self referencing expressions not allowed (except for arrays)
+#kp <- if(SPF >=  0.1) kp / 2 else 3.25 # (line 116)
+# but this is apparently not new
+# for models 1:100 I have odin 21 errors
+# "BIOMD0000000007" "BIOMD0000000016" "BIOMD0000000020" "BIOMD0000000024" "BIOMD0000000034" "BIOMD0000000036" "BIOMD0000000047" "BIOMD0000000050" "BIOMD0000000054" "BIOMD0000000055" "BIOMD0000000056" "BIOMD0000000059" "BIOMD0000000069" "BIOMD0000000075" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087" "BIOMD0000000088" "BIOMD0000000095" "BIOMD0000000096" "BIOMD0000000097"
+# all except 5 (20, 50, 59, 75, 81) are errors I had before
+# Let's check out these 5 first
+# 20 is fixed - that was a problem with non-constant parameters that depend on some other parameter value but do not have an initial value
+# 50 is fixed - that was a problem with parameters/species that start with a number or an underscore
+# 59 is now working as well
+# 75 working as well - that was a problem when parameters appear locally and globally (assuming local definition is more important), is overriding the global parameters
+# 81 was working before but was not correct. Instead, I need to introduce features to recognise "modifier species" (species that do not change, i.e. do not have their own ODE but play a role in some of the equations (similar to parameters))
+# oxoM_EX <- if(t >=  3 && t <= 8) 10 else if(t >=  8) 0 else 0
+# still working on this. trying to catch duplicated events, continue on line 1300
+# this is more difficult than expected. leaving it for now
+
+# 24.02.2025
+# ImportError
+# "BIOMD0000000232" "BIOMD0000000234" "BIOMD0000000246" "BIOMD0000000256" "BIOMD0000000280"
+# "BIOMD0000000471"
+# "BIOMD0000000988" "BIOMD0000001061" "BIOMD0000001062" "BIOMD0000001063" "BIOMD0000001064" "BIOMD0000001066" "BIOMD0000001067" "BIOMD0000001068" "BIOMD0000001069" "BIOMD0000001070" "BIOMD0000001071" "BIOMD0000001073" "BIOMD0000001074" "BIOMD0000001075" "BIOMD0000001076"
+# fixed models up to BIOMD0000000988
+
+# 25.02.25
+# odin errors for models 1-100 (40!)
+# [1] "BIOMD0000000006" "BIOMD0000000007" "BIOMD0000000013" "BIOMD0000000015" "BIOMD0000000017" "BIOMD0000000018" "BIOMD0000000019" "BIOMD0000000023" "BIOMD0000000024" "BIOMD0000000025"
+#[11] "BIOMD0000000027" "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000034" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000047" "BIOMD0000000049"
+#[21] "BIOMD0000000051" "BIOMD0000000054" "BIOMD0000000055" "BIOMD0000000056" "BIOMD0000000061" "BIOMD0000000063" "BIOMD0000000064" "BIOMD0000000067" "BIOMD0000000068" "BIOMD0000000069"
+#[31] "BIOMD0000000070" "BIOMD0000000071" "BIOMD0000000076" "BIOMD0000000077" "BIOMD0000000081" "BIOMD0000000087" "BIOMD0000000088" "BIOMD0000000095" "BIOMD0000000096" "BIOMD0000000097"
+# fixed "BIOMD0000000006" (problem with boundary conditions)
+# "BIOMD0000000007" self referencing not allowed - not quite sure how to fix that
+# fixed "BIOMD0000000013" problem with boundary conditions that are constant without being defined as constant
+# "BIOMD0000000015", "BIOMD0000000017" - BIOMD0000000023 were fine then
+# "BIOMD0000000024" broken because of delay() must be the only call on the rhs
+# "BIOMD0000000025" too
+# "BIOMD0000000034" too
+# fixed "BIOMD0000000027" - was issue with constant species
+# "BIOMD0000000029" "BIOMD0000000031" "BIOMD0000000033" "BIOMD0000000037" "BIOMD0000000038" "BIOMD0000000046" "BIOMD0000000049" "BIOMD0000000064" "BIOMD0000000067" BIOMD0000000068 "BIOMD0000000070" "BIOMD0000000071" "BIOMD0000000076" were fine then
+# fixed "BIOMD0000000047" (also translate Time to t now - I hope that's correct?)
+# "BIOMD0000000051" still not working Unknown variable txt
+# definition of time variable ..> defined in math section of assignment rule, then csymbol but I do not know how to access that
+# ImportError: 16, OdinError: 319, working model prop: 1- (16 + 319)/1073 = 0.6877912
+# 26.02.25
+# fixed BIOMD0000000054 (had problem with reserved parameter list)
+# BIOMD0000000055 also time as t defined (Unknown variable txt)
+# BIOMD0000000056 Self referencing expressions not allowed (except for arrays)
+# BIOMD000000061 broken: Error in strsplit(filename, "\\.")[[1]] : subscript out of bounds
+# BIOMD0000000063 broken: Unknown variable Vhk VratioVmax <- Vhk / (cytoplasm * parameter_7) # (line 25)
+# fixed BIOMD0000000069: issue with replacing "default"
+# BIOMD0000000077 broken: Error: variables on lhs must be within deriv() or initial() (H) H <- if(t >  5) 0 else 0 # (line 36)
+# BIOMD0000000081 broken: Error: variables on lhs must be within deriv() or initial() (oxoM_EX) oxoM_EX <- if(t >=  3) 10 else 0 # (line 106) oxoM_EX <- if(geq(t, 8)) 0 else 0 # (line 107)
+# BIOMD0000000087 broken: Error: Self referencing expressions not allowed (except for arrays) Mec1RPAssDNA <- if(Mec1RPAssDNA + RPAssDNA + ssDNA <=  1) 0 else 0 # (line 202)
+# BIOMD0000000088 broken: Error: Duplicate entries must all be array assignments (s2) s2 <- 0 # (line 298) s2 <- if(txt >=  300) 0.01 else 0 # (line 313)
+# BIOMD0000000095 broken: Error: Unknown variable txt ld <- if(txt >  30) 1 else 0 # (line 156)
+# BIOMD0000000096 broken: Error: Self referencing expressions not allowed (except for arrays) Day_in_hours <- if(Day_in_hours - txt <=  0) Day_in_hours + 24 else 24 # (line 158)
+# BIOMD0000000097 broken: Error: Self referencing expressions not allowed (except for arrays) Day_in_hours <- if(Day_in_hours - txt <=  0) Day_in_hours + 24 else 24 # (line 157)
+
+# 03.03.2025
+# Models 101-200
+# "BIOMD0000000101" "BIOMD0000000104" "BIOMD0000000110" "BIOMD0000000111" "BIOMD0000000120" "BIOMD0000000121" "BIOMD0000000122" "BIOMD0000000125" "BIOMD0000000126" "BIOMD0000000127"
+# "BIOMD0000000129" "BIOMD0000000130" "BIOMD0000000131" "BIOMD0000000132" "BIOMD0000000133" "BIOMD0000000134" "BIOMD0000000135" "BIOMD0000000136" "BIOMD0000000137" "BIOMD0000000139"
+# "BIOMD0000000140" "BIOMD0000000141" "BIOMD0000000142" "BIOMD0000000144" "BIOMD0000000148" "BIOMD0000000149" "BIOMD0000000152" "BIOMD0000000153" "BIOMD0000000154" "BIOMD0000000155"
+# "BIOMD0000000158" "BIOMD0000000161" "BIOMD0000000162" "BIOMD0000000164" "BIOMD0000000165" "BIOMD0000000167" "BIOMD0000000179" "BIOMD0000000180" "BIOMD0000000188" "BIOMD0000000189"
+# "BIOMD0000000195" "BIOMD0000000196"
+# fixed "BIOMD0000000101" which was unknown variable txt (I now read the defintion of the time variable if it exists)
+# that also fixed BIOMD0000000051, BIOMD0000000055, BIOMD0000000095
+
+# 04.03.2025
+# ImportError
+# 42
+# OdinError
+# 313
+# for models 1074 - 1624
+
+# Model BIOMD0000000104
+Model <- model_generator$new()
+Model_res <- Model$run(0:10)
+cols <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+matplot(Model_res[, 1], Model_res[, -1], xlab = "Time", ylab = "Number of individuals",
+        type = "l", col = cols, lty = 1, ylim = c(0,1.2))
+legend("topright", lwd = 1, col = cols, legend = colnames(Model_res)[-1], bty = "n")
+
+# problem seems to be that libSBML::Species_getInitialAmount(species) returns 0 (should be NA)
+# but the value is actually set in libSBML::Species_getInitialConcentration(species)
+# that's fixed now
+# but I am still missing the assignment rule for species_3 for some reason
+# species_3 is a modifier, has an Assignment rule and an initialAssigment. These seem to create conflicts
+
+# this creates the correct results
+# Initial Conditions
+initial(species_0) <- species_0_init
+species_0_init <- user(1)
+initial(species_1) <- species_1_init
+species_1_init <- user(0)
+#initial(species_2) <- species_2_init
+#species_2_init <- user(0)
+#initial(species_3) <- species_3_init
+#species_3_init <- user(0)
+initial(species_4) <- species_4_init
+species_4_init <- user(0)
+# Differential equations
+deriv(species_0) <- 0 - 1 * compartment_0 * species_0 * species_2 * k1
+deriv(species_1) <- 0 + 1 * compartment_0 * species_0 * species_2 * k1 - 1 * compartment_0 * k2 * species_1 * species_3
+#deriv(species_2) <- 0
+#deriv(species_3) <- 0
+deriv(species_4) <- 0 + 1 * compartment_0 * k2 * species_1 * species_3
+species_5 <- 1
+# Parameters
+k1 <- user(1)
+k2 <- user(1)
+# Events
+species_2 <- if(t >=  1) 0.4 else 1
+species_3 <- species_5 - species_2
+# Compartments
+compartment_0 <- 1
+
 #151 (1-495), 70 (500-750)
 # common error messages:
 # "Function 'pow' is not in the derivatives table" --> problem was in SpeciesRules where I calculate the derivative for the species
@@ -48,7 +246,7 @@ OdinError_ids[1:OdinError]
 # with 9 models in the intersect
 # so, 308 models result in error in total
 # i.e. 704 can be translated and run successfully
-# that are 70%
+# that is 70%
 
 # (also others not in the derivates table: GK_219, 'goldbeter_koshland', 'floor', 'gt')
 

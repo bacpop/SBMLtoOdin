@@ -1,15 +1,25 @@
 Package: SBMLtoOdin
 Type: Package
-Title: What the Package Does (Title Case)
+Title: SBMLtoOdin: Translate ODE models from SBML format into odin code.
 Version: 0.1.0
-Author: Who wrote it
+Author: c(
+    person("Leonie", "Lorenz", email = "llorenz@ebi.ac.uk", role = "cre"),
+    person("John", "Lees", email = "jlees@ebi.ac.uk", role = "aut"),
+    person("EMBL's European Bioinformatics Institute (EMBL-EBI)", role = c("fnd")))
 Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: A framework for translating ordinary differential equation (ODE) models in the systems biology markup language (SBML) into executable odin code.
+URL: https://github.com/bacpop/SBMLtoOdin
+BugReports: https://github.com/bacpop/SBMLtoOdin/issues
+License: Apache-2.0 license
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
+Imports:
+    libSBML,
+    httr,
+    jsonlite
+    stringi
+    stringr
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

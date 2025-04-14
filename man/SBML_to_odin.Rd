@@ -4,7 +4,7 @@
 \alias{SBML_to_odin}
 \title{Title}
 \usage{
-SBML_to_odin(model, path_to_output)
+SBML_to_odin(model, path_to_output, input_str)
 }
 \arguments{
 \item{model}{A libSBML model.}
