@@ -1,7 +1,9 @@
 # SBMLtoOdin
-An R package for translating ODE models from the Systems Biology Markup Language (SBML, https://sbml.org/) into the domain-specific language odin (https://github.com/mrc-ide/odin). 
+An R package for translating ODE models from the Systems Biology Markup Language (SBML, https://sbml.org/) into the domain-specific language odin (https://github.com/mrc-ide/odin).
 
-# Installation
+SBMLtoOdin was mainly developed to translate SBML models from the BioModels database (https://www.ebi.ac.uk/biomodels/), which hosts thousands of computational models for biology, but it can be run on any SBML file.
+
+## Installation
 ```R
 # install devtools which allows users to install SBMLtoOdin
 install.packages("devtools")
@@ -18,8 +20,8 @@ install_github("bacpop/SBMLtoOdin")
 library(SBMLtoOdin)
 ```
 
-# Usage (with model example)
-## Importing models
+## Usage (with model example)
+### Importing models
 ```R
 # import model using BioModels ID, which directly downloads the model and translates it using SBMLtoOdin, e.g.
 SBMLtoOdin::importSBMLfromBioModels("BIOMD0000000012","Repressilator.R")
@@ -28,7 +30,7 @@ SBMLtoOdin::importSBMLfromBioModels("BIOMD0000000012","Repressilator.R")
 SBMLtoOdin::importSBMLfromFile("BIOMD0000000012.xml","Repressilator.R")
 ```
 
-## Running models
+### Running models
 ```R
 # need to install odin for this
 install.packages("odin")
