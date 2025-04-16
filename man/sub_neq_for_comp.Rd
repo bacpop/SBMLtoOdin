@@ -18,3 +18,4 @@ Title
 \examples{
 sub_neq_for_comp("if(neq(a,2))")
 }
+\keyword{internal}

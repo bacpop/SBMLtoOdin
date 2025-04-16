@@ -22,3 +22,4 @@ Title
 \examples{
 getFunctionOutputForRules(model, formula, index)
 }
+\keyword{internal}

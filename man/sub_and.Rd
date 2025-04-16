@@ -18,3 +18,4 @@ Title
 \examples{
 sub_and("if(and(b,c))")
 }
+\keyword{internal}

@@ -18,3 +18,4 @@ Title
 \examples{
 translate_piecewise("piecewise(1.55, lt(C, 3100), 0.2)")
 }
+\keyword{internal}

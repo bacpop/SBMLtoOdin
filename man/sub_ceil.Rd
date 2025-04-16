@@ -18,3 +18,4 @@ Title
 \examples{
 sub_ceil("ceil(1.2)")
 }
+\keyword{internal}

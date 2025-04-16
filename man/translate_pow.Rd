@@ -18,3 +18,4 @@ Title
 \examples{
 translate_pow("pow(2,5)")
 }
+\keyword{internal}

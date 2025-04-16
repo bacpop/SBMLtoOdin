@@ -18,3 +18,4 @@ Title
 \examples{
 translate_root("root(2,4)")
 }
+\keyword{internal}

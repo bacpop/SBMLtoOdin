@@ -6,7 +6,7 @@ Author: c(
     person("Leonie", "Lorenz", email = "llorenz@ebi.ac.uk", role = "cre"),
     person("John", "Lees", email = "jlees@ebi.ac.uk", role = "aut"),
     person("EMBL's European Bioinformatics Institute (EMBL-EBI)", role = c("fnd")))
-Maintainer: The package maintainer <yourself@somewhere.net>
+Maintainer: Leonie Lorenz  <llorenz@ebi.ac.uk>
 Description: A framework for translating ordinary differential equation (ODE) models in the systems biology markup language (SBML) into executable odin code.
 URL: https://github.com/bacpop/SBMLtoOdin
 BugReports: https://github.com/bacpop/SBMLtoOdin/issues

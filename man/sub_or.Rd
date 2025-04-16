@@ -18,3 +18,4 @@ Title
 \examples{
 sub_or("if(or(b,c))")
 }
+\keyword{internal}

@@ -18,3 +18,4 @@ Title
 \examples{
 sub_lt("if(lt(a,2))")
 }
+\keyword{internal}

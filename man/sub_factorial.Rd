@@ -18,3 +18,4 @@ Title
 \examples{
 sub_factorial("a + factorial(4)")
 }
+\keyword{internal}

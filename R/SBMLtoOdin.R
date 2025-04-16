@@ -4,6 +4,8 @@
 #' @param ind A string.
 #' @param r A string.
 #'
+#' @keywords internal
+#'
 #' @importFrom libSBML Reaction_isSetKineticLaw Reaction_getKineticLaw KineticLaw_isSetMath KineticLaw_getMath Model_getNumFunctionDefinitions FunctionDefinition_getId Model_getFunctionDefinition FunctionDefinition_getBody FunctionDefinition_getArgument formulaToString
 #'
 #' @return function output of rule as string
@@ -48,6 +50,8 @@ getFunctionOutputForRules <- function(m, formula, func_id){
 #' @param param_name A string.
 #' @param reserved_lib A dictionary.
 #'
+#' @keywords internal
+#'
 #' @return A string.
 #'
 #' @examples
@@ -62,6 +66,8 @@ in_reserved_lib <- function(param_name, reserved_lib){
 #' Title
 #'
 #' @param file_content A string.
+#'
+#' @keywords internal
 #'
 #' @importFrom stringi stri_split_fixed
 #'
@@ -94,6 +100,8 @@ translate_pow <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @importFrom stringi stri_split_fixed
 #'
 #' @return file content as string
@@ -123,6 +131,8 @@ translate_root <- function(file_content){
 #' Title
 #'
 #' @param file_content A string.
+#'
+#' @keywords internal
 #'
 #' @importFrom stringi stri_split_fixed
 #'
@@ -183,6 +193,8 @@ translate_piecewise <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @importFrom stringi stri_split_fixed
 #'
 #' @return A string.
@@ -205,6 +217,8 @@ sub_factorial <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @return A string.
 #'
 #' @examples
@@ -224,6 +238,8 @@ sub_ceil <- function(file_content){
 #' Title
 #'
 #' @param file_content A string.
+#'
+#' @keywords internal
 #'
 #' @return file content
 #'
@@ -248,6 +264,8 @@ sub_and <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @return file content
 #'
 #' @examples
@@ -270,6 +288,8 @@ sub_or <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @return file content
 #'
 #' @examples
@@ -291,6 +311,8 @@ sub_leq <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @return file content
 #'
 #' @examples
@@ -311,6 +333,8 @@ sub_neq_for_comp <- function(file_content){
 #' Title
 #'
 #' @param file_content A string.
+#'
+#' @keywords internal
 #'
 #' @return file content
 #'
@@ -334,6 +358,7 @@ sub_eq_for_comp <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
 #'
 #' @importFrom stringr str_count
 #'
@@ -359,6 +384,8 @@ sub_lt <- function(file_content){
 #'
 #' @param file_content A string.
 #'
+#' @keywords internal
+#'
 #' @return file content A string.
 #'
 #' @examples
@@ -380,6 +407,8 @@ sub_gt <- function(file_content){
 #' Title
 #'
 #' @param file_content A string.
+#'
+#' @keywords internal
 #'
 #' @return file content A string.
 #'
@@ -404,6 +433,8 @@ sub_geq <- function(file_content){
 #'
 #' @param model A libSBML model.
 #' @param path_to_output A string (location of odin model file to be created).
+#'
+#' @keywords internal
 #'
 #' @importFrom libSBML Model_getNumSpecies Species_getId Species_getInitialAmount Species_getInitialConcentration Model_getNumRules Reaction_getNumProducts Rule_getId Model_getRule Model_getNumReactions Reaction_getNumProducts Model_getNumParameters Parameter_getConstant Model_getParameter Parameter_getId Parameter_getValue Model_getNumCompartments Model_getCompartment Compartment_getId Compartment_getSize KineticLaw_getFormula Reaction_getKineticLaw
 #'

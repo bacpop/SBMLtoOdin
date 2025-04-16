@@ -20,3 +20,4 @@ Title
 \examples{
 SBMLtoOdin("/usr/models/my_SBML_model.xml","/usr/models/my_odin_model.R")
 }
+\keyword{internal}
