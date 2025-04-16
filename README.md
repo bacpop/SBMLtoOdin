@@ -11,7 +11,7 @@ library(devtools)
 
 # install libSBML
 # this requires a few manual steps
-# download R tar.gz file from here https://sourceforge.net/projects/sbml/files/libsbml/5.19.0/stable/R%20interface/
+# download R bindings (libSBML-5.20.2 src archive) from here https://github.com/sbmlteam/libsbml/releases/tag/v5.20.2
 # then go to "Packages" or "Packages and Data" section in R Studio --> Install --> from Package Archive File (tar.gz) --> choose tar.gz file that has just been downloaded
 # more information on libSBML installation here: https://sbml.org/software/libsbml/libsbml-docs/installation/
 
