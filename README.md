@@ -27,7 +27,7 @@ library(SBMLtoOdin)
 SBMLtoOdin::importSBMLfromBioModels("BIOMD0000000012","Repressilator.R")
 
 # alternatively, run SBMLtoOdin on local file, e.g.
-SBMLtoOdin::importSBMLfromFile("BIOMD0000000012.xml","Repressilator.R")
+SBMLtoOdin::importSBMLfromFile("tests/testthat/BIOMD0000000012_url.xml","Repressilator.R")
 ```
 
 ### Running models
