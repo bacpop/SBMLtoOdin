@@ -466,6 +466,10 @@ SBML_to_odin <- function(model, path_to_output, input_str){
     #print(reserved_names_lib)
   }
 
+  if(libSBML::Model_getConversionFactor(model) != ""){
+    stop("SBMLtoOdin cannot handle conversion factors yet.")
+  }
+
   file_str <-""
 
 
@@ -518,6 +522,9 @@ SBML_to_odin <- function(model, path_to_output, input_str){
   boundary_cond_rule_list <- list()
   for (i in seq_len(libSBML::Model_getNumSpecies(model))) {
     species <- libSBML::Model_getSpecies(model, i-1)
+    if(libSBML::Species_getConversionFactor(species) != ""){
+      stop("SBMLtoOdin cannot handle conversion factors yet.")
+    }
     # find initial concentration
     spec_conc <- NA
     conc_found <- FALSE
@@ -562,11 +569,19 @@ SBML_to_odin <- function(model, path_to_output, input_str){
 
   # find all initial species assignments that I might have missed
   if(libSBML::Model_getNumInitialAssignments(model)>0){
-    #print("found initial Assignment")
         for (j in seq_len(libSBML::Model_getNumInitialAssignments(model))) {
           init_assign <- libSBML::Model_getInitialAssignment(model,j-1)
           var_id <- libSBML::InitialAssignment_getSymbol(init_assign)
           conc = libSBML::formulaToString(libSBML::InitialAssignment_getMath(init_assign))
+          if(grepl("time",conc)){
+            conc <- gsub("time", "0", conc, fixed = TRUE)
+          }
+          if(grepl("(t)",conc)){
+            conc <- gsub("(t)", "(0)", conc, fixed = TRUE)
+          }
+          if(grepl(" t ",conc)){
+            conc <- gsub(" t ", " 0 ", conc, fixed = TRUE)
+          }
           if(is.element(var_id, names(species_list))){
             if(grepl("_init",conc)){
               conc <- paste(conc, "1",sep="")
